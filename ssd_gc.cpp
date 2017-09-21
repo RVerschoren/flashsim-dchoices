@@ -31,17 +31,18 @@
 
 using namespace ssd;
 
-Garbage_collector::Garbage_collector(Ftl &ftl)
+Garbage_collector::Garbage_collector(FtlParent *ftl)
+    : ftl(ftl)
 {
-	return;
+    return;
 }
 
 Garbage_collector::~Garbage_collector(void)
 {
-	return;
+    return;
 }
 
-enum status Garbage_collector::collect(Event &event)
+void Garbage_collector::collect(Address &address)
 {
-	return SUCCESS;
+    return;
 }

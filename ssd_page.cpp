@@ -25,7 +25,18 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
+#include <stdexcept>
+
 #include "ssd.h"
+
+namespace ssd {
+	/*
+	 * Buffer used for accessing data pages.
+	 */
+	void *global_buffer;
+
+}
 
 using namespace ssd;
 
@@ -35,8 +46,6 @@ Page::Page(const Block &parent, double read_delay, double write_delay):
 	read_delay(read_delay),
 	write_delay(write_delay)
 {
-	state = EMPTY;
-
 	if(read_delay < 0.0){
 		fprintf(stderr, "Page warning: %s: constructor received negative read delay value\n\tsetting read delay to 0.0\n", __func__);
 		this -> read_delay = 0.0;
@@ -57,22 +66,40 @@ Page::~Page(void)
 enum status Page::_read(Event &event)
 {
 	assert(read_delay >= 0.0);
-	if(state == VALID){
-		event.incr_time_taken(read_delay);
-		return SUCCESS;
-	} else
-		return FAILURE;
+
+	event.incr_time_taken(read_delay);
+
+	if (!event.get_noop() && PAGE_ENABLE_DATA)
+		global_buffer = (char*)page_data + event.get_address().get_linear_address() * PAGE_SIZE;
+
+    ///@TODO return SUCCESS;
+   if(state == VALID)
+   {
+       return SUCCESS;
+   }
+   return FAILURE;
 }
 
 enum status Page::_write(Event &event)
 {
 	assert(write_delay >= 0.0);
-	if(state == EMPTY){
-		event.incr_time_taken(write_delay);
+
+	event.incr_time_taken(write_delay);
+
+	if (PAGE_ENABLE_DATA && event.get_payload() != NULL && event.get_noop() == false)
+	{
+		void *data = (char*)page_data + event.get_address().get_linear_address() * PAGE_SIZE;
+		memcpy (data, event.get_payload(), PAGE_SIZE);
+	}
+
+	if (event.get_noop() == false)
+	{
+		assert(state == EMPTY);
 		state = VALID;
-		return SUCCESS;
-	} else
-		return FAILURE;
+		lpn = event.get_logical_address();
+	}
+
+	return SUCCESS;
 }
 
 const Block &Page::get_parent(void) const
@@ -89,4 +116,14 @@ void Page::set_state(enum page_state state)
 {
 	this -> state = state;
 	return;
+}
+
+Page* Page::get_pointer()
+{
+	return this;
+}
+
+ulong Page::get_logical_address() const
+{
+	return lpn;
 }

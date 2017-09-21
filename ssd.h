@@ -24,13 +24,24 @@
  * 		typedefs, and constants used in ssd namespace
  *		Controls options, such as debug asserts and test code insertions
  */
-
 #include <stdlib.h>
 #include <stdio.h>
+#include <functional>
+#include <vector>
+#include <random>
+#include <queue>
+#include <map>
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/identity.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/global_fun.hpp>
+#include <boost/multi_index/random_access_index.hpp>
+#include "util.h"
+#include <iostream>
 
 #ifndef _SSD_H
 #define _SSD_H
-
 namespace ssd {
 
 /* define exit codes for errors */
@@ -38,15 +49,12 @@ namespace ssd {
 #define FILE_ERR -2
 
 /* Uncomment to disable asserts for production */
-#define NDEBUG
-
-#define LOG() printf("[%s-%s():%3d]\n", __FILE__, __func__, __LINE__);
+//#define NDEBUG
 
 
 /* some obvious typedefs for laziness */
 typedef unsigned int uint;
 typedef unsigned long ulong;
-
 
 /* Simulator configuration from ssd_config.cpp */
 
@@ -91,7 +99,9 @@ extern const uint DIE_SIZE;
  * 	delay for writing to plane register
  * 	delay for merging is based on read, write, reg_read, reg_write
  * 		and does not need to be explicitly defined */
-extern const uint PLANE_SIZE;
+///@TODO Reset to const
+///extern const uint PLANE_SIZE;
+extern uint PLANE_SIZE;
 extern const double PLANE_REG_READ_DELAY;
 extern const double PLANE_REG_WRITE_DELAY;
 
@@ -99,16 +109,109 @@ extern const double PLANE_REG_WRITE_DELAY;
  * 	number of Pages per Block (size)
  * 	number of erases in lifetime of block
  * 	delay for erasing block */
-extern const uint BLOCK_SIZE;
-extern const uint BLOCK_ERASES;
+///@TODO Reset to const
+///extern const uint BLOCK_SIZE;
+extern uint BLOCK_SIZE;
+//extern  const uint BLOCK_ERASES;
+extern  uint BLOCK_ERASES;
 extern const double BLOCK_ERASE_DELAY;
+/*
+ * Maximum amount of erasures for testing
+ */
+extern uint MAX_ERASURES;
 
 /* Page class:
  * 	delay for Page reads
  * 	delay for Page writes */
 extern const double PAGE_READ_DELAY;
 extern const double PAGE_WRITE_DELAY;
+extern const uint PAGE_SIZE;
+extern const bool PAGE_ENABLE_DATA;
 
+/*
+ * Mapping directory
+ */
+extern const uint MAP_DIRECTORY_SIZE;
+
+/*
+ * FTL Implementation
+ */
+///@TODO Reset to const
+///extern const uint FTL_IMPLEMENTATION;
+extern uint FTL_IMPLEMENTATION;
+
+/*
+ * LOG page limit for BAST.
+ */
+extern const uint BAST_LOG_PAGE_LIMIT;
+
+/*
+ * LOG page limit for FAST.
+ */
+extern const uint FAST_LOG_PAGE_LIMIT;
+
+/*
+ * Number of blocks allowed to be in DFTL Cached Mapping Table.
+ */
+extern const uint CACHE_DFTL_LIMIT;
+
+
+/*
+ * FTL uses Block_manager class
+ */
+///@TODO Reset to const
+///extern const bool FTL_USE_BLOCKMANAGER;
+extern bool FTL_USE_BLOCKMANAGER;
+
+/*
+ * Overprovisioning factor for the xWF-based FTLs.
+ */
+///@TODO Reset to const
+///extern const double SPARE_FACTOR;
+extern double SPARE_FACTOR;
+extern double HOT_FRACTION; //f
+extern double HOT_REQUEST_RATIO; //r
+
+/*
+ * GC algorithm to use
+ */
+///@TODO Reset to const
+/// extern const uint GC_ALGORITHM;
+extern uint GC_ALGORITHM;
+
+/*
+ * Amount of choices D (for use in DChoices GCA)
+ */
+ ///@TODO Reset to const
+extern uint DCHOICES_D;
+
+/*
+ * Count GC reads/writes/erases for full victims
+ */
+extern const bool GC_FULLVICTIM_STATS;
+
+
+/*
+ * Parallelism mode
+ */
+extern const uint PARALLELISM_MODE;
+
+/* Virtual block size (as a multiple of the physical block size) */
+extern const uint VIRTUAL_BLOCK_SIZE;
+
+/* Virtual page size (as a multiple of the physical page size) */
+extern const uint VIRTUAL_PAGE_SIZE;
+
+extern const uint NUMBER_OF_ADDRESSABLE_BLOCKS;
+
+/* RAISSDs: Number of physical SSDs */
+extern const uint RAID_NUMBER_OF_PHYSICAL_SSDS;
+
+/*
+ * Memory area to support pages with data.
+ */
+extern void *page_data;
+extern void *global_buffer;
 
 /* Enumerations to clarify status integers in simulation
  * Do not use typedefs on enums for reader clarity */
@@ -132,7 +235,7 @@ enum block_state{FREE, ACTIVE, INACTIVE};
  * 	                                page states set to empty)
  * 	merge - move valid pages from block at address (page state set to invalid)
  * 	           to free pages in block at merge_address */
-enum event_type{READ, WRITE, ERASE, MERGE};
+enum event_type{READ, WRITE, ERASE, MERGE, TRIM};
 
 /* General return status
  * return status for simulator operations that only need to provide general
@@ -146,6 +249,30 @@ enum status{FAILURE, SUCCESS};
  * 	the page field is not valid */
 enum address_valid{NONE, PACKAGE, DIE, PLANE, BLOCK, PAGE};
 
+/*
+ * Block type status
+ * used for the garbage collector specify what pool
+ * it should work with.
+ * the block types are log, data and map (Directory map usually)
+ */
+enum block_type {LOG, DATA, LOG_SEQ};
+
+/*
+ * Enumeration of the different FTL implementations.
+ */
+enum ftl_implementation {IMPL_PAGE, IMPL_BAST, IMPL_FAST, IMPL_DFTL, IMPL_BIMODAL, IMPL_SWF, IMPL_DWF, IMPL_HCWF};
+
+/*
+ * Enumeration of the different GC algorithms.
+ */
+enum gc_algorithm {RANDOM, GREEDY, DCHOICES};
+
+/*
+ * Enumeration of the different hot/cold identification techniques
+ */
+enum hc_ident {HCID_NONE, HCID_STATIC, HCID_ORACLE};
+
+#define BOOST_MULTI_INDEX_ENABLE_SAFE_MODE 1
 
 /* List classes up front for classes that have references to their "parent"
  * (e.g. a Package's parent is a Ssd).
@@ -156,6 +283,7 @@ enum address_valid{NONE, PACKAGE, DIE, PLANE, BLOCK, PAGE};
  * constructors that accept args
  * (e.g. a Ssd contains a Controller, Ram, Bus, and Packages). */
 class Address;
+class Stats;
 class Event;
 class Channel;
 class Bus;
@@ -165,28 +293,26 @@ class Plane;
 class Die;
 class Package;
 class Garbage_Collector;
+//class GCParent;
+class GCImpl_Random;
+class GCImpl_DChoices;
+class GCImpl_Greedy;
 class Wear_Leveler;
-class Ftl;
+class Block_manager;
+class FtlParent;
+class FtlImpl_Page;
+class FtlImpl_Bast;
+class FtlImpl_Fast;
+class FtlImpl_DftlParent;
+class FtlImpl_Dftl;
+class FtlImpl_BDftl;
+class FtlImpl_DWF;
+//class FtlImpl_HCWF;
 class Ram;
 class Controller;
 class Ssd;
 
-class Cmdq;
 
-
-class Cmdq
-{
-public:
-	Cmdq();
-	~Cmdq(void);
-	void enqueue(Event &evt);
-	Event *dequeue(void);
-	void show(void);
-private:
-	uint size;
-	Event *head;
-	Event *tail;
-};
 
 /* Class to manage physical addresses for the SSD.  It was designed to have
  * public members like a struct for quick access but also have checking,
@@ -195,22 +321,175 @@ private:
 class Address
 {
 public:
-	uint package;
-	uint die;
-	uint plane;
-	uint block;
-	uint page;
-	enum address_valid valid;
-	Address(void);
-	Address(const Address &address);
-	Address(const Address *address);
-	Address(uint package, uint die, uint plane, uint block, uint page, enum address_valid valid);
-	~Address();
-	enum address_valid check_valid(uint ssd_size = SSD_SIZE, uint package_size = PACKAGE_SIZE, uint die_size = DIE_SIZE, uint plane_size = PLANE_SIZE, uint block_size = BLOCK_SIZE);
-	enum address_valid compare(const Address &address) const;
-	void print(FILE *stream = stdout);
-	Address &operator=(const Address &rhs);
+    uint package;
+    uint die;
+    uint plane;
+    uint block;
+    uint page;
+    ulong real_address;
+    enum address_valid valid;
+    Address(void);
+    Address(const Address &address);
+    Address(const Address *address);
+    Address(uint package, uint die, uint plane, uint block, uint page, enum address_valid valid);
+    Address(uint address, enum address_valid valid);
+    ~Address();
+    enum address_valid check_valid(uint ssd_size = SSD_SIZE, uint package_size = PACKAGE_SIZE, uint die_size = DIE_SIZE, uint plane_size = PLANE_SIZE, uint block_size = BLOCK_SIZE);
+    enum address_valid compare(const Address &address) const;
+    void print(FILE *stream = stdout);
+
+    void operator+(int);
+    void operator+(uint);
+    Address &operator+=(const uint rhs);
+    Address &operator=(const Address &rhs);
+
+    void set_linear_address(ulong address, enum address_valid valid);
+    void set_linear_address(ulong address);
+    ulong get_linear_address() const;
 };
+
+/**
+ * @brief Class that can determine whether a specific LPN is deemed as hot or cold.
+ */
+class HotColdID{
+public:
+    HotColdID() = default;
+    virtual ~HotColdID() = default;
+    virtual bool is_hot(ulong lpn, ulong requestNr = 0) = 0;
+    //virtual ulong get_num_hot() = 0;
+    //virtual double get_hot_fraction() = 0;
+};
+
+class Oracle_HCID : public HotColdID{
+public:
+    Oracle_HCID(std::vector<Event> &events, std::vector<bool> &requestIsHot);
+    virtual ~Oracle_HCID();
+    void advance_frame();
+    bool is_hot(ulong lpn, ulong requestNr = 0);
+    //ulong get_num_hot();
+    //double get_hot_fraction();
+private:
+    uint currentFrame;
+    uint nrFrames;
+    ulong numHotLPN;
+    std::vector<bool> hotMap;
+};
+
+class Static_HCID : public HotColdID{
+public:
+    Static_HCID(ulong maxLPN, double hotFraction);
+    virtual ~Static_HCID();
+    void advance_frame();
+    bool is_hot(ulong lpn, ulong requestNr = 0);
+    //ulong get_num_hot();
+    //double  get_hot_fraction();
+private:
+    ulong maxLPN;
+    ulong numHotLPN;
+    double hotFraction;
+    std::map<ulong, bool> hotMap;
+};
+
+class Stats
+{
+public:
+    // Flash Translation Layer
+    long numFTLRead;
+    long numFTLWrite;
+    long numFTLErase;
+    long numFTLTrim;
+
+    // Garbage Collection
+    long numGCRead;
+    long numGCWrite;
+    long numGCErase;
+
+    // Wear-leveling
+    long numWLRead;
+    long numWLWrite;
+    long numWLErase;
+
+    // Log based FTL's
+    long numLogMergeSwitch;
+    long numLogMergePartial;
+    long numLogMergeFull;
+
+    // Page based FTL's
+    long numPageBlockToPageConversion;
+
+    // Cache based FTL's
+    long numCacheHits;
+    long numCacheFaults;
+
+    // Possible SSD performance measures
+    std::vector<double> PEfairness;
+    std::vector<double> SSDendurance;
+    std::vector<ulong> PEDistribution;
+
+    // DWF
+    std::vector<uint> WFEHotPagesDist;
+    std::vector<uint> WFIHotPagesDist;
+    std::vector<ulong> victimValidDist;
+
+    // HCWF
+    std::vector<ulong> hotValidPages;
+    std::vector<uint> hotBlocks;
+    std::vector<ulong> coldValidPages;
+    std::vector<uint> coldBlocks;
+
+    // Memory consumptions (Bytes)
+    long numMemoryTranslation;
+    long numMemoryCache;
+
+    long numMemoryRead;
+    long numMemoryWrite;
+
+    // Advance statictics
+    double translation_overhead() const;
+    double variance_of_io() const;
+    double cache_hit_ratio() const;
+
+    // Advance currentPE and log some statistics
+    uint get_currentPE() const;
+    //void next_GC_invocation(const uint validPages, const uint hotValidPages, const bool victimReplacesHWFOrWFE);
+    void next_currentPE(const HotColdID *hcID = nullptr);
+
+    // Constructors, maintainance, output, etc.
+    Stats(void);
+
+    void print_statistics();
+    void reset_statistics();
+    void write_statistics(FILE *stream);
+    void write_statistics_csv(const std::string fileName, const uint runID, const std::string traceID = "");
+    void write_header(FILE *stream);
+private:
+    uint currentPE;
+    std::string create_filename(const std::string fileNameStart, const std::string fieldName, const uint runID, const std::string traceID = "");
+    void write_csv(const std::string fileName, const double value, const uint begin = 0);
+    void write_csv(const std::string fileName, const std::vector<double> &vector, const uint begin = 0);
+    void write_csv(const std::string fileName, const std::vector<uint> &vector, const uint begin = 0);
+    void write_csv(const std::string fileName, const std::vector<ulong> &vector,const  uint begin = 0);
+    void reset();
+};
+
+/* Class to emulate a log block with page-level mapping. */
+class LogPageBlock
+{
+public:
+    LogPageBlock(void);
+    ~LogPageBlock(void);
+
+    int *pages;
+    long *aPages;
+    Address address;
+    int numPages;
+
+    LogPageBlock *next;
+
+    bool operator() (const ssd::LogPageBlock& lhs, const ssd::LogPageBlock& rhs) const;
+    bool operator() (const ssd::LogPageBlock*& lhs, const ssd::LogPageBlock*& rhs) const;
+};
+
 
 /* Class to manage I/O requests as events for the SSD.  It was designed to keep
  * track of an I/O request by storing its type, addressing, and timing.  The
@@ -218,47 +497,55 @@ public:
 class Event
 {
 public:
-	Event(enum event_type type, ulong logical_address, uint size, double start_time);
-	~Event(void);
-	void consolidate_metaevent(Event &list);
-	ulong get_logical_address(void) const;
-	const Address &get_address(void) const;
-	const Address &get_merge_address(void) const;
-	uint get_size(void) const;
-	enum event_type get_event_type(void) const;
-	double get_start_time(void) const;
-	double get_time_taken(void) const;
-	double get_bus_wait_time(void) const;
-	Event *get_next(void) const;
-	void set_address(const Address &address);
-	void set_merge_address(const Address &address);
-	void set_next(Event &next);
-	double incr_bus_wait_time(double time);
-	double incr_time_taken(double time_incr);
-	void print(FILE *stream = stdout);
+    Event(enum event_type type, ulong logical_address, uint size, double start_time);
+    ~Event(void);
+    void consolidate_metaevent(Event &list);
+    ulong get_logical_address(void) const;
+    const Address &get_address(void) const;
+    const Address &get_merge_address(void) const;
+    const Address &get_log_address(void) const;
+    const Address &get_replace_address(void) const;
+    uint get_size(void) const;
+    enum event_type get_event_type(void) const;
+    double get_start_time(void) const;
+    double get_time_taken(void) const;
+    double get_bus_wait_time(void) const;
+    bool get_noop(void) const;
+    Event *get_next(void) const;
+    void set_address(const Address &address);
+    void set_merge_address(const Address &address);
+    void set_log_address(const Address &address);
+    void set_replace_address(const Address &address);
+    void set_next(Event &next);
+    void set_payload(void *payload);
+    void set_event_type(const enum event_type &type);
+    void set_noop(bool value);
+    void *get_payload(void) const;
+    double incr_bus_wait_time(double time);
+    double incr_time_taken(double time_incr);
+    void print(FILE *stream = stdout);
 private:
-	double start_time;
-	double time_taken;
-	double bus_wait_time;
-	enum event_type type;
-	ulong logical_address;
-	Address address;
-	Address merge_address;
-	uint size;
-	Event *next;
+    double start_time;
+    double time_taken;
+    double bus_wait_time;
+    enum event_type type;
+
+    ulong logical_address;
+    Address address;
+    Address merge_address;
+    Address log_address;
+    Address replace_address;
+    uint size;
+    void *payload;
+    Event *next;
+    bool noop;
 };
 
-/* Quicksort for Channel class
- * Supply base pointer to array to be sorted along with inclusive range of
- * indices to sort.  The move operations for sorting the first array will also
- * be performed on the second array, or the second array can be NULL.  The
- * second array is useful for the channel scheduling table where we want to
- * sort by one row and keep data pairs in columns together. */
-/* extern "C" void quicksort(double *array1, double *array2, long left, long right); */
-void quicksort(double *array1, double *array2, long left, long right);
-/* internal quicksort functions listed for documentation purposes
- * long partition(double *array1, double *array2, long left, long right);
- * void swap(double *x, double *y); */
+std::vector<Event> read_event_from_trace(std::string fileName, const std::function<Event (const std::string&)> &readLine);
+std::vector<bool> read_oracle(const std::string filename);
+Event read_event_simple(std::string line);
+Event read_event_BIOtracer(std::string line);
+
 
 /* Single bus channel
  * Simulate multiple devices on 1 bus channel with variable bus transmission
@@ -272,22 +559,32 @@ void quicksort(double *array1, double *array2, long left, long right);
 class Channel
 {
 public:
-	Channel(double ctrl_delay = BUS_CTRL_DELAY, double data_delay = BUS_DATA_DELAY, uint table_size = BUS_TABLE_SIZE, uint max_connections = BUS_MAX_CONNECT);
-	~Channel(void);
-	enum status lock(double start_time, double duration, Event &event);
-	enum status connect(void);
-	enum status disconnect(void);
+    Channel(double ctrl_delay = BUS_CTRL_DELAY, double data_delay = BUS_DATA_DELAY, uint table_size = BUS_TABLE_SIZE, uint max_connections = BUS_MAX_CONNECT);
+    ~Channel(void);
+    enum status lock(double start_time, double duration, Event &event);
+    enum status connect(void);
+    enum status disconnect(void);
+    double ready_time(void);
 private:
-	void unlock(double current_time);
-	uint table_size;
-	double * const lock_time;
-	double * const unlock_time;
-	uint table_entries;
-	uint selected_entry;
-	uint num_connected;
-	uint max_connections;
-	double ctrl_delay;
-	double data_delay;
+    void unlock(double current_time);
+
+    struct lock_times {
+        double lock_time;
+        double unlock_time;
+    };
+
+    static bool timings_sorter(lock_times const& lhs, lock_times const& rhs);
+    std::vector<lock_times> timings;
+
+    uint table_entries;
+    uint selected_entry;
+    uint num_connected;
+    uint max_connections;
+    double ctrl_delay;
+    double data_delay;
+
+    // Stores the highest unlock_time in the vector timings list.
+    double ready_at;
 };
 
 /* Multi-channel bus comprised of Channel class objects
@@ -301,35 +598,40 @@ private:
 class Bus
 {
 public:
-	Bus(uint num_channels = SSD_SIZE, double ctrl_delay = BUS_CTRL_DELAY, double data_delay = BUS_DATA_DELAY, uint table_size = BUS_TABLE_SIZE, uint max_connections = BUS_MAX_CONNECT);
-	~Bus(void);
-	enum status lock(uint channel, double start_time, double duration, Event &event);
-	enum status connect(uint channel);
-	enum status disconnect(uint channel);
-	Channel &get_channel(uint channel);
+    Bus(uint num_channels = SSD_SIZE, double ctrl_delay = BUS_CTRL_DELAY, double data_delay = BUS_DATA_DELAY, uint table_size = BUS_TABLE_SIZE, uint max_connections = BUS_MAX_CONNECT);
+    ~Bus(void);
+    enum status lock(uint channel, double start_time, double duration, Event &event);
+    enum status connect(uint channel);
+    enum status disconnect(uint channel);
+    Channel &get_channel(uint channel);
+    double ready_time(uint channel);
 private:
-	uint num_channels;
-	Channel * const channels;
+    uint num_channels;
+    Channel * const channels;
 };
+
+
 
 /* The page is the lowest level data storage unit that is the size unit of
  * requests (events).  Pages maintain their state as events modify them. */
 class Page
 {
 public:
-	Page(const Block &parent, double read_delay = PAGE_READ_DELAY, double write_delay = PAGE_WRITE_DELAY);
-	~Page(void);
-	enum status _read(Event &event);
-	enum status _write(Event &event);
-	const Block &get_parent(void) const;
-	enum page_state get_state(void) const;
-	void set_state(enum page_state state);
+    Page(const Block &parent, double read_delay = PAGE_READ_DELAY, double write_delay = PAGE_WRITE_DELAY);
+    ~Page(void);
+    enum status _read(Event &event);
+    enum status _write(Event &event);
+    const Block &get_parent(void) const;
+    enum page_state get_state(void) const;
+    void set_state(enum page_state state);
+    ulong get_logical_address() const;
+    Page* get_pointer();
 private:
-	enum page_state state;
-	const Block &parent;
-	double read_delay;
-	double write_delay;
-/* 	Address next_page; */
+    enum page_state state;
+    const Block &parent;
+    double read_delay;
+    double write_delay;
+    ulong lpn;//Associated logical page number, for easier lookup in FTLs.
 };
 
 /* The block is the data storage hardware unit where erases are implemented.
@@ -337,32 +639,46 @@ private:
 class Block
 {
 public:
-	Block(const Plane &parent, uint size = BLOCK_SIZE, ulong erases_remaining = BLOCK_ERASES, double erase_delay = BLOCK_ERASE_DELAY);
-	~Block(void);
-	enum status read(Event &event);
-	enum status write(Event &event);
-	enum status _erase(Event &event);
-	const Plane &get_parent(void) const;
-	uint get_pages_valid(void) const;
-	uint get_pages_invalid(void) const;
-	enum block_state get_state(void) const;
-	enum page_state get_state(uint page) const;
-	enum page_state get_state(const Address &address) const;
-	double get_last_erase_time(void) const;
-	ulong get_erases_remaining(void) const;
-	uint get_size(void) const;
-	enum status get_next_page(Address &address) const;
-	void invalidate_page(uint page);
+    long physical_address;
+    uint pages_invalid;
+    Block(const Plane &parent, uint size = BLOCK_SIZE, ulong erases_remaining = BLOCK_ERASES, double erase_delay = BLOCK_ERASE_DELAY, long physical_address = 0);
+    ~Block(void);
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status write(Event &event, uint &pageNr);
+    enum status replace(Event &event);
+    enum status _erase(Event &event);
+    const Plane &get_parent(void) const;
+    uint get_pages_valid(void) const;
+    uint get_pages_invalid(void) const;
+    uint get_pages_empty(void) const;
+    enum block_state get_state(void) const;
+    enum page_state get_state(uint page) const;
+    enum page_state get_state(const Address &address) const;
+    double get_last_erase_time(void) const;
+    double get_modification_time(void) const;
+    ulong get_erases_remaining(void) const;
+    uint get_size(void) const;
+    enum status get_next_page(Address &address) const;
+    enum status get_next_page(uint &page) const;
+    void invalidate_page(uint page);
+    long get_physical_address(void) const;
+    Page* get_page_pointer(const Address &addr);
+    Block *get_pointer(void);
+    block_type get_block_type(void) const;
+    void set_block_type(block_type value);
 private:
-	uint size;
-	Page * const data;
-	const Plane &parent;
-	uint pages_valid;
-	uint pages_invalid;
-	enum block_state state;
-	ulong erases_remaining;
-	double last_erase_time;
-	double erase_delay;
+    uint size;
+    Page * const data;
+    const Plane &parent;
+    uint pages_valid;
+    enum block_state state;
+    ulong erases_remaining;
+    double last_erase_time;
+    double erase_delay;
+    double modification_time;
+
+    block_type btype;
 };
 
 /* The plane is the data storage hardware unit that contains blocks.
@@ -371,34 +687,44 @@ private:
 class Plane
 {
 public:
-	Plane(const Die &parent, uint plane_size = PLANE_SIZE, double reg_read_delay = PLANE_REG_READ_DELAY, double reg_write_delay = PLANE_REG_WRITE_DELAY);
-	~Plane(void);
-	enum status read(Event &event);
-	enum status write(Event &event);
-	enum status erase(Event &event);
-	enum status _merge(Event &event);
-	const Die &get_parent(void) const;
-	double get_last_erase_time(const Address &address) const;
-	ulong get_erases_remaining(const Address &address) const;
-	void get_least_worn(Address &address) const;
-	uint get_size(void) const;
-	enum page_state get_state(const Address &address) const;
-	void get_free_page(Address &address) const;
-	ssd::uint get_num_free(const Address &address) const;
-	ssd::uint get_num_valid(const Address &address) const;
+    Plane(const Die &parent, uint plane_size = PLANE_SIZE, double reg_read_delay = PLANE_REG_READ_DELAY, double reg_write_delay = PLANE_REG_WRITE_DELAY, long physical_address = 0);
+    ~Plane(void);
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status erase(Event &event);
+    enum status replace(Event &event);
+    enum status _merge(Event &event);
+    const Die &get_parent(void) const;
+    double get_last_erase_time(const Address &address) const;
+    ulong get_erases_remaining(const Address &address) const;
+    void get_least_worn(Address &address) const;
+    uint get_size(void) const;
+    enum page_state get_state(const Address &address) const;
+    enum block_state get_block_state(const Address &address) const;
+    void get_free_page(Address &address) const;
+    ssd::uint get_num_free(const Address &address) const;
+    ssd::uint get_num_valid(const Address &address) const;
+    ssd::uint get_num_invalid(const Address &address) const;
+    Page* get_page_pointer(const Address &addr);
+    Block *get_block_pointer(const Address & address);
+    Plane* get_pointer();
+    //For specific blocks:
+    uint get_pages_valid(const Address &address) const;
+    uint get_pages_invalid(const Address &address) const;
+    uint get_pages_erased(const Address &address) const;
 private:
-	void update_wear_stats(void);
-	enum status get_next_page(void);
-	uint size;
-	Block * const data;
-	const Die &parent;
-	uint least_worn;
-	ulong erases_remaining;
-	double last_erase_time;
-	double reg_read_delay;
-	double reg_write_delay;
-	Address next_page;
-	uint free_blocks;
+    void update_wear_stats(void);
+    enum status get_next_page(void);
+    uint size;
+    Block * const data;
+    const Die &parent;
+    uint least_worn;
+    ulong erases_remaining;
+    double last_erase_time;
+    double reg_read_delay;
+    double reg_write_delay;
+    Address next_page;
+    uint free_blocks;
 };
 
 /* The die is the data storage hardware unit that contains planes and is a flash
@@ -406,30 +732,40 @@ private:
 class Die
 {
 public:
-	Die(const Package &parent, Channel &channel, uint die_size = DIE_SIZE);
-	~Die(void);
-	enum status read(Event &event);
-	enum status write(Event &event);
-	enum status erase(Event &event);
-	enum status merge(Event &event);
-	enum status _merge(Event &event);
-	const Package &get_parent(void) const;
-	double get_last_erase_time(const Address &address) const;
-	ulong get_erases_remaining(const Address &address) const;
-	void get_least_worn(Address &address) const;
-	enum page_state get_state(const Address &address) const;
-	void get_free_page(Address &address) const;
-	ssd::uint get_num_free(const Address &address) const;
-	ssd::uint get_num_valid(const Address &address) const;
+    Die(const Package &parent, Channel &channel, uint die_size = DIE_SIZE, long physical_address = 0);
+    ~Die(void);
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status erase(Event &event);
+    enum status replace(Event &event);
+    enum status merge(Event &event);
+    enum status _merge(Event &event);
+    const Package &get_parent(void) const;
+    double get_last_erase_time(const Address &address) const;
+    ulong get_erases_remaining(const Address &address) const;
+    void get_least_worn(Address &address) const;
+    enum page_state get_state(const Address &address) const;
+    enum block_state get_block_state(const Address &address) const;
+    void get_free_page(Address &address) const;
+    ssd::uint get_num_free(const Address &address) const;
+    ssd::uint get_num_valid(const Address &address) const;
+    ssd::uint get_num_invalid(const Address &address) const;
+    Page *get_page_pointer(const Address &addr);
+    Block *get_block_pointer(const Address & address);
+    Plane *get_plane_pointer(const Address & address);
+    //For specific blocks:
+    uint get_pages_valid(const Address &address) const;
+    uint get_pages_invalid(const Address &address) const;
+    uint get_pages_erased(const Address &address) const;
 private:
-	void update_wear_stats(const Address &address);
-	uint size;
-	Plane * const data;
-	const Package &parent;
-	Channel &channel;
-	uint least_worn;
-	ulong erases_remaining;
-	double last_erase_time;
+    void update_wear_stats(const Address &address);
+    uint size;
+    Plane * const data;
+    const Package &parent;
+    Channel &channel;
+    uint least_worn;
+    ulong erases_remaining;
+    double last_erase_time;
 };
 
 /* The package is the highest level data storage hardware unit.  While the
@@ -439,28 +775,38 @@ private:
 class Package
 {
 public:
-	Package (const Ssd &parent, Channel &channel, uint package_size = PACKAGE_SIZE);
-	~Package ();
-	enum status read(Event &event);
-	enum status write(Event &event);
-	enum status erase(Event &event);
-	enum status merge(Event &event);
-	const Ssd &get_parent(void);
-	double get_last_erase_time (const Address &address) const;
-	ulong get_erases_remaining (const Address &address) const;
-	void get_least_worn (Address &address) const;
-	enum page_state get_state(const Address &address) const;
-	void get_free_page(Address &address) const;
-	ssd::uint get_num_free(const Address &address) const;
-	ssd::uint get_num_valid(const Address &address) const;
+    Package (const Ssd &parent, Channel &channel, uint package_size = PACKAGE_SIZE, long physical_address = 0);
+    ~Package ();
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status erase(Event &event);
+    enum status replace(Event &event);
+    enum status merge(Event &event);
+    const Ssd &get_parent(void) const;
+    double get_last_erase_time (const Address &address) const;
+    ulong get_erases_remaining (const Address &address) const;
+    void get_least_worn (Address &address) const;
+    enum page_state get_state(const Address &address) const;
+    enum block_state get_block_state(const Address &address) const;
+    void get_free_page(Address &address) const;
+    ssd::uint get_num_free(const Address &address) const;
+    ssd::uint get_num_valid(const Address &address) const;
+    ssd::uint get_num_invalid(const Address &address) const;
+    Page *get_page_pointer(const Address & address);
+    Block *get_block_pointer(const Address & address);
+    Plane *get_plane_pointer(const Address & address);
+    //For specific blocks:
+    uint get_pages_valid(const Address &address) const;
+    uint get_pages_invalid(const Address &address) const;
+    uint get_pages_erased(const Address &address) const;
 private:
-	void update_wear_stats (const Address &address);
-	uint size;
-	Die * const data;
-	const Ssd &parent;
-	uint least_worn;
-	ulong erases_remaining;
-	double last_erase_time;
+    void update_wear_stats (const Address &address);
+    uint size;
+    Die * const data;
+    const Ssd &parent;
+    uint least_worn;
+    ulong erases_remaining;
+    double last_erase_time;
 };
 
 /* place-holder definitions for GC, WL, FTL, RAM, Controller
@@ -468,44 +814,459 @@ private:
 class Garbage_collector
 {
 public:
-	Garbage_collector(Ftl &FTL);
-	~Garbage_collector(void);
-	enum status collect(Event &event);
+    Garbage_collector(FtlParent *FTL);
+    virtual ~Garbage_collector(void);
+    //enum status collect(Event &event);
+    virtual void collect(Address &addr);
+protected:
+    FtlParent *ftl;
 };
+
+class GCImpl_Random : public Garbage_collector
+{
+public:
+    GCImpl_Random(FtlParent *FTL);
+    ~GCImpl_Random();
+    void collect(Address &addr);
+};
+
+class GCImpl_DChoices : public Garbage_collector
+{
+public:
+    GCImpl_DChoices(FtlParent *FTL, const uint d = DCHOICES_D);
+    ~GCImpl_DChoices();
+    void collect(Address &addr);
+private:
+    uint d;
+    std::vector<ulong> choices;
+};
+
+class GCImpl_Greedy : public Garbage_collector
+{
+public:
+    GCImpl_Greedy(FtlParent *FTL);
+    ~GCImpl_Greedy();
+    void collect(Address &addr);
+};
+
+
+
 
 class Wear_leveler
 {
 public:
-	Wear_leveler(Ftl &FTL);
-	~Wear_leveler(void);
-	enum status insert(const Address &address);
+    Wear_leveler(FtlParent &FTL);
+    ~Wear_leveler(void);
+    enum status insert(const Address &address);
 };
+
+class Block_manager
+{
+public:
+    Block_manager(FtlParent *ftl);
+    ~Block_manager(void);
+
+    // Usual suspects
+    Address get_free_block(Event &event);
+    Address get_free_block(block_type btype, Event &event);
+    void invalidate(Address address, block_type btype);
+    void print_statistics();
+    void insert_events(Event &event);
+    void promote_block(block_type to_type);
+    bool is_log_full();
+    void erase_and_invalidate(Event &event, Address &address, block_type btype);
+    int get_num_free_blocks();
+
+    // Used to update GC on used pages in blocks.
+    void update_block(Block * b);
+
+    // Singleton
+    static Block_manager *instance();
+    static void instance_initialize(FtlParent *ftl);
+    static Block_manager *inst;
+
+    void cost_insert(Block *b);
+
+    void print_cost_status();
+
+
+
+private:
+    void get_page_block(Address &address, Event &event);
+    static bool block_comparitor_simple (Block const *x,Block const *y);
+
+    FtlParent *ftl;
+
+    ulong data_active;
+    ulong log_active;
+    ulong logseq_active;
+
+    ulong max_log_blocks;
+    ulong max_blocks;
+
+    ulong max_map_pages;
+    ulong map_space_capacity;
+
+    // Cost/Benefit priority queue.
+    typedef boost::multi_index_container<
+            Block*,
+            boost::multi_index::indexed_by<
+                boost::multi_index::random_access<>,
+                boost::multi_index::ordered_non_unique<BOOST_MULTI_INDEX_MEMBER(Block,uint,pages_invalid) >
+          >
+        > active_set;
+
+    typedef active_set::nth_index<0>::type ActiveBySeq;
+    typedef active_set::nth_index<1>::type ActiveByCost;
+
+    active_set active_cost;
+
+    // Usual block lists
+    std::vector<Block*> active_list;
+    std::vector<Block*> free_list;
+    std::vector<Block*> invalid_list;
+
+    // Counter for returning the next free page.
+    ulong directoryCurrentPage;
+    // Address on the current cached page in SRAM.
+    ulong directoryCachedPage;
+
+    ulong simpleCurrentFree;
+
+    // Counter for handling periodic sort of active_list
+    uint num_insert_events;
+
+    uint current_writing_block;
+
+    bool inited;
+
+    bool out_of_blocks;
+};
+
+
+class FtlParent
+{
+public:
+    FtlParent(Controller &controller);
+
+    virtual ~FtlParent ();
+
+    virtual void initialize();
+
+    virtual enum status read(Event &event) = 0;
+    virtual enum status write(Event &event) = 0;
+    virtual enum status trim(Event &event) = 0;
+    virtual void cleanup_block(Event &event, Block *block);
+
+    virtual void print_ftl_statistics();
+
+    friend class Block_manager;
+
+    uint get_pages_valid(const Address &address) const;
+    uint get_pages_invalid(const Address &address) const;
+    uint get_pages_erased(const Address &address) const;
+    ulong get_erases_remaining(const Address &address) const;
+    void get_least_worn(Address &address) const;
+    enum page_state get_state(const Address &address) const;
+    enum block_state get_block_state(const Address &address) const;
+    Block *get_block_pointer(const Address & address);
+
+    Address resolve_logical_address(unsigned int logicalAddress);
+
+protected:
+    Controller &controller;
+    Garbage_collector *garbage;
+};
+
+class FtlImpl_Page : public FtlParent
+{
+public:
+    FtlImpl_Page(Controller &controller);
+    ~FtlImpl_Page();
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status trim(Event &event);
+private:
+    ulong currentPage;
+    ulong numPagesActive;
+    bool *trim_map;
+    long *map;
+};
+
+class FtlImpl_Bast : public FtlParent
+{
+public:
+    FtlImpl_Bast(Controller &controller);
+    ~FtlImpl_Bast();
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status trim(Event &event);
+private:
+    std::map<long, LogPageBlock*> log_map;
+
+    long *data_list;
+
+    void dispose_logblock(LogPageBlock *logBlock, long lba);
+    void allocate_new_logblock(LogPageBlock *logBlock, long lba, Event &event);
+
+    bool is_sequential(LogPageBlock* logBlock, long lba, Event &event);
+    bool random_merge(LogPageBlock *logBlock, long lba, Event &event);
+
+    void update_map_block(Event &event);
+
+    void print_ftl_statistics();
+
+    int addressShift;
+    int addressSize;
+};
+
+class FtlImpl_Fast : public FtlParent
+{
+public:
+    FtlImpl_Fast(Controller &controller);
+    ~FtlImpl_Fast();
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status trim(Event &event);
+private:
+    void initialize_log_pages();
+
+    std::map<long, LogPageBlock*> log_map;
+
+    long *data_list;
+    bool *pin_list;
+
+    bool write_to_log_block(Event &event, long logicalBlockAddress);
+
+    void switch_sequential(Event &event);
+    void merge_sequential(Event &event);
+    bool random_merge(LogPageBlock *logBlock, Event &event);
+
+    void update_map_block(Event &event);
+
+    void print_ftl_statistics();
+
+    long sequential_logicalblock_address;
+    Address sequential_address;
+    uint sequential_offset;
+
+    uint log_page_next;
+    LogPageBlock *log_pages;
+
+    int addressShift;
+    int addressSize;
+};
+
+
+
+class FtlImpl_DftlParent : public FtlParent
+{
+public:
+    FtlImpl_DftlParent(Controller &controller);
+    ~FtlImpl_DftlParent();
+    virtual enum status read(Event &event) = 0;
+    virtual enum status write(Event &event) = 0;
+    virtual enum status trim(Event &event) = 0;
+protected:
+    struct MPage {
+        long vpn;
+        long ppn;
+        double create_ts;
+        double modified_ts;
+        double last_visited_time;
+        bool cached;
+
+        MPage(long vpn);
+    };
+
+    long int cmt;
+
+    static double mpage_last_visited_time_compare(const MPage& mpage);
+
+    typedef boost::multi_index_container<
+        FtlImpl_DftlParent::MPage,
+            boost::multi_index::indexed_by<
+            // sort by MPage::operator<
+                boost::multi_index::random_access<>,
+
+                // Sort by last visited time
+                boost::multi_index::ordered_non_unique<boost::multi_index::global_fun<const FtlImpl_DftlParent::MPage&,double,&FtlImpl_DftlParent::mpage_last_visited_time_compare> >
+          >
+        > trans_set;
+
+    typedef trans_set::nth_index<0>::type MpageByID;
+    typedef trans_set::nth_index<1>::type MpageByLastVisited;
+
+    trans_set trans_map;
+    long *reverse_trans_map;
+
+    void consult_GTD(long dppn, Event &event);
+    void reset_MPage(FtlImpl_DftlParent::MPage &mpage);
+
+    void resolve_mapping(Event &event, bool isWrite);
+    void update_translation_map(FtlImpl_DftlParent::MPage &mpage, long ppn);
+
+    bool lookup_CMT(long dlpn, Event &event);
+
+    long get_free_data_page(Event &event);
+    long get_free_data_page(Event &event, bool insert_events);
+
+    void evict_page_from_cache(Event &event);
+    void evict_specific_page_from_cache(Event &event, long lba);
+
+    // Mapping information
+    int addressPerPage;
+    int addressSize;
+    uint totalCMTentries;
+
+    // Current storage
+    long currentDataPage;
+    long currentTranslationPage;
+};
+
+class FtlImpl_Dftl : public FtlImpl_DftlParent
+{
+public:
+    FtlImpl_Dftl(Controller &controller);
+    ~FtlImpl_Dftl();
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status trim(Event &event);
+    void cleanup_block(Event &event, Block *block);
+    void print_ftl_statistics();
+};
+
+class FtlImpl_BDftl : public FtlImpl_DftlParent
+{
+public:
+    FtlImpl_BDftl(Controller &controller);
+    ~FtlImpl_BDftl();
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status trim(Event &event);
+    void cleanup_block(Event &event, Block *block);
+private:
+    struct BPage {
+        uint pbn;
+        unsigned char nextPage;
+        bool optimal;
+
+        BPage();
+    };
+
+    BPage *block_map;
+    bool *trim_map;
+
+    std::queue<Block*> blockQueue;
+
+    Block* inuseBlock;
+    bool block_next_new();
+    long get_free_biftl_page(Event &event);
+    void print_ftl_statistics();
+};
+
+class FtlImpl_SWF : public FtlParent // Simulates the working of a page-mapped FTL
+{
+public:
+    FtlImpl_SWF(Controller &controller);
+    ~FtlImpl_SWF();
+    void initialize();
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status trim(Event &event);
+private:
+    ulong maxLBA;
+    Block *WFPtr;// 1 WF, but assume 1 WF per plane if DIE_SIZE = PACKAGE_SIZE = 1
+    Address WF; //Redundancy to speed things up
+    std::vector<Address> map;
+};
+
+class FtlImpl_DWF : public FtlParent
+{
+public:
+    FtlImpl_DWF(Controller &controller);
+    FtlImpl_DWF(Controller &controller, const std::vector<Event> &events);
+    ~FtlImpl_DWF();
+    void initialize();
+    void initialize(const std::vector<Event> &events);
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status trim(Event &event);
+private:
+    enum status erase_victim(Event &event, Address & victim,  std::vector<ulong> &validLPNs);
+    enum status copy_to_block(Event &event, double startTime, const std::vector<ulong> &validLPNs, Address &block, const Block *blockPtr);
+    enum status copy_to_blocks(Event &event, double startTime, const std::vector<ulong> &validLPNs, uint freeInBlock1,
+                                                                                        Address &block1, const Block *block1Ptr, Address &block2, const Block *block2Ptr);
+
+    ulong numLPN; // Number of unique LPNs in the map
+    Block *WFIPtr; // External WF
+    Address WFI;
+    Block *WFEPtr; // Internal WF
+    Address WFE;
+    std::map<ulong, Address> map;
+    Static_HCID hcID;
+};
+
+class FtlImpl_HCWF : public FtlParent
+{
+public:
+    FtlImpl_HCWF(Controller &controller);
+    ~FtlImpl_HCWF();
+    void initialize();
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status trim(Event &event);
+private:
+    enum status erase_victim(Event &event, const Address & victim, std::vector<ulong> &validLPNs);
+    enum status copy_to_block(Event &event, double startTime, const std::vector<ulong> &validLPNs, const Address &block, const Block *blockPtr);
+    enum status copy_to_blocks(Event &event, double startTime, const std::vector<ulong> &validLPNs, uint freeInBlock1,
+                                                                                        const Address &block1, const Block *block1Ptr, const Address &block2, const Block *block2Ptr);
+
+    ulong maxLBA;
+    ulong maxHotBlocks;
+    Block *CWFPtr; // Cold WF
+    Address CWF;
+    Block *HWFPtr; // Hot WF
+    Address HWF;
+    std::vector<Address> map;
+    HotColdID *hcID;
+    std::vector< std::vector< std::vector< std::vector<bool> > > > blockIsHot;
+};
+
 
 /* Ftl class has some completed functions that get info from lower-level
  * hardware.  The other functions are in place as suggestions and can
  * be changed as you wish. */
-class Ftl
+/*class Ftl
 {
 public:
-	Ftl(Controller &controller);
-	~Ftl(void);
-	enum status read(Event &event);
-	enum status write(Event &event);
-private:
-	enum status erase(Event &event);
-	enum status merge(Event &event);
-	void garbage_collect(Event &event);
-	ulong get_erases_remaining(const Address &address) const;
-	void get_least_worn(Address &address) const;
-	enum page_state get_state(const Address &address) const;
-	Controller &controller;
-	Garbage_collector garbage;
-	Wear_leveler wear;
-	Address *free_list;
-	Address *valid_list;
-	Address *invalid_list;
-	long *map;
-};
+    Ftl(Controller &controller);
+    virtual ~Ftl(void);
+    virtual void initialize();
+    virtual enum status read(Event &event);
+    virtual enum status write(Event &event);
+    friend Garbage_collector;
+    friend GCImpl_Random;
+    friend GCImpl_DChoices;
+    friend GCImpl_Greedy;
+protected:
+    Page* get_page(const Address &addr) const;
+    Block* get_block(const Address &addr) const;
+    Plane* get_plane(const Address &addr) const;
+    enum status erase(Event &event);
+    enum status merge(Event &event);
+    void garbage_collect(Event &event);
+    ulong get_erases_remaining(const Address &address) const;
+    void get_least_worn(Address &address) const;
+    enum page_state get_state(const Address &address) const;
+    Controller &controller;
+    Garbage_collector *garbage;
+    Wear_leveler wear;
+    Address *free_list;
+    Address *valid_list;
+    Address *invalid_list;
+    long *map;
+};*/
 
 /* This is a basic implementation that only provides delay updates to events
  * based on a delay value multiplied by the size (number of pages) needed to
@@ -513,13 +1274,13 @@ private:
 class Ram
 {
 public:
-	Ram(double read_delay = RAM_READ_DELAY, double write_delay = RAM_WRITE_DELAY);
-	~Ram(void);
-	enum status read(Event &event);
-	enum status write(Event &event);
+    Ram(double read_delay = RAM_READ_DELAY, double write_delay = RAM_WRITE_DELAY);
+    ~Ram(void);
+    enum status read(Event &event);
+    enum status write(Event &event);
 private:
-	double read_delay;
-	double write_delay;
+    double read_delay;
+    double write_delay;
 };
 
 /* The controller accepts read/write requests through its event_arrive method
@@ -533,21 +1294,48 @@ private:
 class Controller
 {
 public:
-	Controller(Ssd &parent);
-	~Controller(void);
-	enum status event_arrive(Event &event);
-	friend class Ftl;
+    Controller(Ssd &parent);
+    ~Controller(void);
+    void initialize();
+    enum status event_arrive(Event &event);
+    friend class FtlParent;
+    friend class FtlImpl_Page;
+    friend class FtlImpl_Bast;
+    friend class FtlImpl_Fast;
+    friend class FtlImpl_DftlParent;
+    friend class FtlImpl_Dftl;
+    friend class FtlImpl_BDftl;
+    friend class Block_manager;
+    friend class FtlImpl_SWF;
+    friend class FtlImpl_DWF;
+    friend class FtlImpl_HCWF;
+    friend class Garbage_collector;
+    friend class GCImpl_Random;
+    friend class GCImpl_DChoices;
+    friend class GCImpl_Greedy;
+    Stats stats;
+    void print_ftl_statistics();
+    const FtlParent &get_ftl(void) const;
+    Page *get_page_pointer(const Address &address);
+    Block *get_block_pointer(const Address &address);
+    Plane *get_plane_pointer(const Address &address);
+    uint get_pages_valid(const Address &address) const;
+    uint get_pages_invalid(const Address &address) const;
+    uint get_pages_erased(const Address &address) const;
 private:
-	enum status issue(Event &event_list);
-	ssd::ulong get_erases_remaining(const Address &address) const;
-	void get_least_worn(Address &address) const;
-	double get_last_erase_time(const Address &address) const;
-	enum page_state get_state(const Address &address) const;
-	void get_free_page(Address &address) const;
-	ssd::uint get_num_free(const Address &address) const;
-	ssd::uint get_num_valid(const Address &address) const;
-	Ssd &ssd;
-	Ftl ftl;
+    enum status issue(Event &event_list);
+    void translate_address(Address &address);
+    ssd::ulong get_erases_remaining(const Address &address) const;
+    void get_least_worn(Address &address) const;
+    double get_last_erase_time(const Address &address) const;
+    enum page_state get_state(const Address &address) const;
+    enum block_state get_block_state(const Address &address) const;
+    void get_free_page(Address &address) const;
+    ssd::uint get_num_free(const Address &address) const;
+    ssd::uint get_num_valid(const Address &address) const;
+    ssd::uint get_num_invalid(const Address &address) const;
+    Ssd &ssd;
+    FtlParent *ftl;
 };
 
 /* The SSD is the single main object that will be created to simulate a real
@@ -556,37 +1344,78 @@ private:
 class Ssd
 {
 public:
-	Ssd (uint ssd_size = SSD_SIZE);
-	~Ssd(void);
-	double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time);
-	void io_arrive(enum event_type type, ulong logical_address, uint size, double start_time);
-	friend class Controller;
+    Ssd (uint ssd_size = SSD_SIZE);
+    ~Ssd(void);
+    double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time);
+    double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time, void *buffer);
+    friend class Controller;
+    void print_statistics();
+    void reset_statistics();
+    void write_statistics(FILE *stream);
+    void write_statistics_csv(const std::string fileName, const  uint runID, const std::string traceID = "");
+    void write_header(FILE *stream);
+    const Controller &get_controller(void) const;
+    void *get_result_buffer();
+    void print_ftl_statistics();
+    double ready_at(void);
+    Page *get_page_pointer(const Address &address);
+    Block *get_block_pointer(const Address &address);
+    Plane *get_plane_pointer(const Address &address);
+    //For specific blocks:
+    uint get_pages_valid(const Address &address) const;
+    uint get_pages_invalid(const Address &address) const;
+    uint get_pages_erased(const Address &address) const;
 private:
-	enum status read(Event &event);
-	enum status write(Event &event);
-	enum status erase(Event &event);
-	enum status merge(Event &event);
-	ulong get_erases_remaining(const Address &address) const;
-	void update_wear_stats(const Address &address);
-	void get_least_worn(Address &address) const;
-	double get_last_erase_time(const Address &address) const;
-	Package &get_data(void);
-	enum page_state get_state(const Address &address) const;
-	void get_free_page(Address &address) const;
-	ssd::uint get_num_free(const Address &address) const;
-	ssd::uint get_num_valid(const Address &address) const;
-	uint size;
-	Controller controller;
-	Cmdq *cmdq;
-	Ram ram;
-	Bus bus;
-	Package * const data;
-	ulong erases_remaining;
-	ulong least_worn;
-	double last_erase_time;
-//--- seungjin ------------------------------------
-	double timeline;
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status erase(Event &event);
+    enum status merge(Event &event);
+    enum status replace(Event &event);
+    enum status merge_replacement_block(Event &event);
+    ulong get_erases_remaining(const Address &address) const;
+    void update_wear_stats(const Address &address);
+    void get_least_worn(Address &address) const;
+    double get_last_erase_time(const Address &address) const;
+    Package &get_data(void);
+    enum page_state get_state(const Address &address) const;
+    enum block_state get_block_state(const Address &address) const;
+    void get_free_page(Address &address) const;
+    ssd::uint get_num_free(const Address &address) const;
+    ssd::uint get_num_valid(const Address &address) const;
+    ssd::uint get_num_invalid(const Address &address) const;
+    uint size;
+    Controller controller;
+    Ram ram;
+    Bus bus;
+    Package * const data;
+    ulong erases_remaining;
+    ulong least_worn;
+    double last_erase_time;
 };
+
+class RaidSsd
+{
+public:
+    RaidSsd (uint ssd_size = SSD_SIZE);
+    ~RaidSsd(void);
+    double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time);
+    double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time, void *buffer);
+    void *get_result_buffer();
+    friend class Controller;
+    void print_statistics();
+    void reset_statistics();
+    void write_statistics(FILE *stream);
+    void write_header(FILE *stream);
+    const Controller &get_controller(void) const;
+
+    void print_ftl_statistics();
+private:
+    uint size;
+
+    Ssd *Ssds;
+
+};
+
 
 } /* end namespace ssd */
 

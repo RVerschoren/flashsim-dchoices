@@ -66,6 +66,13 @@ Address::Address(uint package, uint die, uint plane, uint block, uint page, enum
 	return;
 }
 
+Address::Address(uint address, enum address_valid valid):
+	valid(valid)
+{
+	assert(address >= 0);
+	set_linear_address(address);
+}
+
 Address::~Address()
 {
 	return;
@@ -139,6 +146,49 @@ void Address::print(FILE *stream)
 	return;
 }
 
+void Address::set_linear_address(ulong address)
+{
+	real_address = address;
+	page = address % BLOCK_SIZE;
+	address /= BLOCK_SIZE;
+	block = address % PLANE_SIZE;
+	address /= PLANE_SIZE;
+	plane = address % DIE_SIZE;
+	address /= DIE_SIZE;
+	die = address % PACKAGE_SIZE;
+	address /= PACKAGE_SIZE;
+	package = address % SSD_SIZE;
+	address /= SSD_SIZE;
+}
+
+void Address::set_linear_address(ulong address, enum address_valid valid)
+{
+	set_linear_address(address);
+	this->valid = valid;
+}
+
+unsigned long Address::get_linear_address() const
+{
+	return real_address;
+}
+
+void Address::operator+(int i)
+{
+	set_linear_address(real_address + i);
+}
+
+void Address::operator+(uint i)
+{
+	set_linear_address(real_address + i);
+}
+
+Address &Address::operator+=(const uint i)
+{
+	set_linear_address(real_address + i);
+	return *this;
+}
+
+
 Address &Address::operator=(const Address &rhs)
 {
 	if(this == &rhs)
@@ -149,5 +199,6 @@ Address &Address::operator=(const Address &rhs)
 	block = rhs.block;
 	page = rhs.page;
 	valid = rhs.valid;
+	real_address = rhs.real_address;
 	return *this;
 }

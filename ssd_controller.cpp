@@ -38,123 +38,234 @@
 
 using namespace ssd;
 
+
 Controller::Controller(Ssd &parent):
-	ssd(parent),
-	ftl(*this)
+    ssd(parent)
+    //,ftl(*this)
 {
-	return;
+
+    switch (FTL_IMPLEMENTATION)
+    {
+    case 0:
+        ftl = new FtlImpl_Page(*this);
+        break;
+    case 1:
+        ftl = new FtlImpl_Bast(*this);
+        break;
+    case 2:
+        ftl = new FtlImpl_Fast(*this);
+        break;
+    case 3:
+        ftl = new FtlImpl_Dftl(*this);
+        break;
+    case 4:
+        ftl = new FtlImpl_BDftl(*this);
+        break;
+    case 5:
+        ftl = new FtlImpl_SWF(*this);
+        break;
+    case 6:
+        ftl = new FtlImpl_DWF(*this);
+        break;
+    case 7:
+        ftl = new FtlImpl_HCWF(*this);
+        break;
+    ///@TODO: Implement and enable remaining FTLs
+    }
+    return;
 }
 
 Controller::~Controller(void)
 {
-	return;
+    if(ftl != nullptr)
+    {
+        delete ftl;
+        ftl = nullptr;
+    }
+    return;
+}
+
+void Controller::initialize(){
+    ftl->initialize();
+    return;
 }
 
 enum status Controller::event_arrive(Event &event)
 {
-	if(event.get_event_type() == READ)
-		return ftl.read(event);
-	else if(event.get_event_type() == WRITE)
-		return ftl.write(event);
-	else
-		fprintf(stderr, "Controller: %s: Invalid event type\n", __func__);
-	return FAILURE;
+    if(event.get_event_type() == READ)
+        return ftl->read(event);
+    else if(event.get_event_type() == WRITE)
+        return ftl->write(event);
+    else if(event.get_event_type() == TRIM)
+        return ftl->trim(event);
+    else
+        fprintf(stderr, "Controller: %s: Invalid event type\n", __func__);
+    return FAILURE;
 }
 
 enum status Controller::issue(Event &event_list)
 {
-	Event *cur;
+    Event *cur;
 
-	/* go through event list and issue each to the hardware
-	 * stop processing events and return failure status if any event in the 
-	 *    list fails */
-	for(cur = &event_list; cur != NULL; cur = cur -> get_next()){
-		if(cur -> get_size() != 1){
-			fprintf(stderr, "Controller: %s: Received non-single-page-sized event from FTL.\n", __func__);
-			return FAILURE;
-		}
-		else if(cur -> get_event_type() == READ)
-		{
-			assert(cur -> get_address().valid > NONE);
-			if(ssd.bus.lock(cur -> get_address().package, cur -> get_start_time(), BUS_CTRL_DELAY, *cur) == FAILURE
-				|| ssd.read(*cur) == FAILURE
-				|| ssd.bus.lock(cur -> get_address().package, cur -> get_start_time(), BUS_CTRL_DELAY + BUS_DATA_DELAY, *cur) == FAILURE
-				|| ssd.ram.write(*cur) == FAILURE
-				|| ssd.ram.read(*cur) == FAILURE)
-				return FAILURE;
-		}
-		else if(cur -> get_event_type() == WRITE)
-		{
-			assert(cur -> get_address().valid > NONE);
-			if(ssd.bus.lock(cur -> get_address().package, cur -> get_start_time(), BUS_CTRL_DELAY + BUS_DATA_DELAY, *cur) == FAILURE
-				|| ssd.ram.write(*cur) == FAILURE
-				|| ssd.ram.read(*cur) == FAILURE
-				|| ssd.write(*cur) == FAILURE)
-				return FAILURE;
-		}
-		else if(cur -> get_event_type() == ERASE)
-		{
-			assert(cur -> get_address().valid > NONE);
-			if(ssd.bus.lock(cur -> get_address().package, cur -> get_start_time(), BUS_CTRL_DELAY, *cur) == FAILURE
-				|| ssd.erase(*cur) == FAILURE)
-				return FAILURE;
-		}
-		else if(cur -> get_event_type() == MERGE)
-		{
-			assert(cur -> get_address().valid > NONE);
-			assert(cur -> get_merge_address().valid > NONE);
-			if(ssd.bus.lock(cur -> get_address().package, cur -> get_start_time(), BUS_CTRL_DELAY, *cur) == FAILURE
-				|| ssd.merge(*cur) == FAILURE)
-				return FAILURE;
-		}
-		else
-		{
-			fprintf(stderr, "Controller: %s: Invalid event type\n", __func__);
-			return FAILURE;
-		}
-	}
-	return SUCCESS;
+    /* go through event list and issue each to the hardware
+     * stop processing events and return failure status if any event in the
+     *    list fails */
+    for(cur = &event_list; cur != NULL; cur = cur -> get_next()){
+        if(cur -> get_size() != 1){
+            fprintf(stderr, "Controller: %s: Received non-single-page-sized event from FTL.\n", __func__);
+            return FAILURE;
+        }
+        else if(cur -> get_event_type() == READ)
+        {
+            assert(cur -> get_address().valid > NONE);
+            if(ssd.bus.lock(cur -> get_address().package, cur -> get_start_time(), BUS_CTRL_DELAY, *cur) == FAILURE
+                || ssd.read(*cur) == FAILURE
+                || ssd.bus.lock(cur -> get_address().package, cur -> get_start_time()+cur -> get_time_taken(), BUS_CTRL_DELAY + BUS_DATA_DELAY, *cur) == FAILURE
+                || ssd.ram.write(*cur) == FAILURE
+                || ssd.ram.read(*cur) == FAILURE
+                || ssd.replace(*cur) == FAILURE)
+                return FAILURE;
+        }
+        else if(cur -> get_event_type() == WRITE)
+        {
+            assert(cur -> get_address().valid > NONE);
+            if(ssd.bus.lock(cur -> get_address().package, cur -> get_start_time(), BUS_CTRL_DELAY + BUS_DATA_DELAY, *cur) == FAILURE
+                || ssd.ram.write(*cur) == FAILURE
+                || ssd.ram.read(*cur) == FAILURE
+                || ssd.write(*cur) == FAILURE
+                || ssd.replace(*cur) == FAILURE)
+                return FAILURE;
+        }
+        else if(cur -> get_event_type() == ERASE)
+        {
+            assert(cur -> get_address().valid > NONE);
+            if(ssd.bus.lock(cur -> get_address().package, cur -> get_start_time(), BUS_CTRL_DELAY, *cur) == FAILURE
+                || ssd.erase(*cur) == FAILURE)
+                return FAILURE;
+        }
+        else if(cur -> get_event_type() == MERGE)
+        {
+            assert(cur -> get_address().valid > NONE);
+            assert(cur -> get_merge_address().valid > NONE);
+            if(ssd.bus.lock(cur -> get_address().package, cur -> get_start_time(), BUS_CTRL_DELAY, *cur) == FAILURE
+                || ssd.merge(*cur) == FAILURE)
+                return FAILURE;
+        }
+        else if(cur -> get_event_type() == TRIM)
+        {
+            return SUCCESS;
+        }
+        else
+        {
+            fprintf(stderr, "Controller: %s: Invalid event type\n", __func__);
+            return FAILURE;
+        }
+    }
+    return SUCCESS;
+}
+
+void Controller::translate_address(Address &address)
+{
+    if (PARALLELISM_MODE != 1)
+        return;
 }
 
 ssd::ulong Controller::get_erases_remaining(const Address &address) const
 {
-	assert(address.valid > NONE);
-	return ssd.get_erases_remaining(address);
+    assert(address.valid > NONE);
+    return ssd.get_erases_remaining(address);
 }
 
 void Controller::get_least_worn(Address &address) const
 {
-	assert(address.valid > NONE);
-	return ssd.get_least_worn(address);
+    assert(address.valid > NONE);
+    return ssd.get_least_worn(address);
 }
 
 double Controller::get_last_erase_time(const Address &address) const
 {
-	assert(address.valid > NONE);
-	return ssd.get_last_erase_time(address);
+    assert(address.valid > NONE);
+    return ssd.get_last_erase_time(address);
 }
 
 enum page_state Controller::get_state(const Address &address) const
 {
-	assert(address.valid > NONE);
-	return (ssd.get_state(address));
+    assert(address.valid > NONE);
+    return (ssd.get_state(address));
+}
+
+enum block_state Controller::get_block_state(const Address &address) const
+{
+    assert(address.valid > NONE);
+    return (ssd.get_block_state(address));
 }
 
 void Controller::get_free_page(Address &address) const
 {
-	assert(address.valid > NONE);
-	ssd.get_free_page(address);
-	return;
+    assert(address.valid > NONE);
+    ssd.get_free_page(address);
+    return;
 }
 
 ssd::uint Controller::get_num_free(const Address &address) const
 {
-	assert(address.valid > NONE);
-	return ssd.get_num_free(address);
+    assert(address.valid > NONE);
+    return ssd.get_num_free(address);
 }
 
 ssd::uint Controller::get_num_valid(const Address &address) const
 {
-	assert(address.valid > NONE);
-	return ssd.get_num_valid(address);
+    assert(address.valid > NONE);
+    return ssd.get_num_valid(address);
+}
+
+
+ssd::uint Controller::get_num_invalid(const Address &address) const
+{
+    assert(address.valid > NONE);
+    return ssd.get_num_invalid(address);
+}
+
+
+Page* Controller::get_page_pointer(const Address &addr)
+{
+    return ssd.get_page_pointer(addr);
+}
+
+Block* Controller::get_block_pointer(const Address &addr)
+{
+    return ssd.get_block_pointer(addr);
+}
+
+Plane* Controller::get_plane_pointer(const Address &addr)
+{
+    return ssd.get_plane_pointer(addr);
+}
+
+const FtlParent &Controller::get_ftl(void) const
+{
+    return (*ftl);
+}
+
+void Controller::print_ftl_statistics()
+{
+    ftl->print_ftl_statistics();
+}
+
+uint Controller::get_pages_valid(const Address &address) const
+{
+    assert(address.valid > NONE);
+    return ssd.get_pages_valid(address);
+}
+
+uint Controller::get_pages_invalid(const Address &address) const
+{
+    assert(address.valid > NONE);
+    return ssd.get_pages_invalid(address);
+}
+
+uint Controller::get_pages_erased(const Address &address) const
+{
+    assert(address.valid > NONE);
+    return ssd.get_pages_erased(address);
 }

@@ -30,18 +30,51 @@
 #include <assert.h>
 #include <stdio.h>
 #include "ssd.h"
+#include <iostream>
 
 using namespace ssd;
 
 Ftl::Ftl(Controller &controller):
 	controller(controller),
-	garbage(*this),
+	//garbage(gca),
 	wear(*this)
 {
+	
+	///@TODO Implement and enable remaining GCAs
+	switch (GC_ALGORITHM)
+	{
+	//case 0:
+	//	gc_impl = new GC_FIFO();
+	//	break;
+	//case 1:
+	//	gc_impl = new GCImpl_Greedy(*this);
+	//	break;
+	case 2:
+		garbage = new GCImpl_Random(this);
+		std::cout << "RANDOM" << std::endl;
+		break;
+	case 3:
+		garbage = new GCImpl_DChoices(this);
+		std::cout << "DCHOICES"<< DCHOICES_D << std::endl;
+		break;
+	default:
+		garbage = new GCImpl_Random(this);
+		std::cout << "GREEDY" << std::endl;
+	}
 	return;
 }
 
 Ftl::~Ftl(void)
+{
+	if(garbage != nullptr)
+	{
+		delete garbage;
+		garbage = nullptr;
+	}
+	return;
+}
+
+void Ftl::initialize()
 {
 	return;
 }
@@ -68,7 +101,7 @@ enum status Ftl::merge(Event &event)
 
 void Ftl::garbage_collect(Event &event)
 {
-	(void) garbage.collect(event);
+	return;
 }
 
 ssd::ulong Ftl::get_erases_remaining(const Address &address) const
@@ -85,4 +118,19 @@ void Ftl::get_least_worn(Address &address) const
 enum page_state Ftl::get_state(const Address &address) const
 {
 	return controller.get_state(address);
+}
+
+ssd::Page* Ftl::get_page(const Address &addr) const
+{
+	return controller.get_page(addr);
+}
+
+ssd::Block* Ftl::get_block(const Address &addr) const
+{
+	return controller.get_block(addr);
+}
+
+ssd::Plane* Ftl::get_plane(const Address &addr) const
+{
+	return controller.get_plane(addr);
 }

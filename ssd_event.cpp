@@ -269,7 +269,7 @@ ioreq_event &Event::operator= (const ioreq_event &rhs)
 }
 #endif
 
-std::vector<bool> ssd::read_oracle(const std::string &filename)
+std::vector<bool> read_oracle(const std::string &filename)
 {
     std::ifstream data(filename);
     std::vector<bool> oracle;
@@ -286,7 +286,7 @@ std::vector<bool> ssd::read_oracle(const std::string &filename)
 }
 
 
-std::vector<Event> ssd::read_event_from_trace(std::string filename, const std::function<Event (const std::string&)> &readLine)
+std::vector<Event> ssd::read_event_from_trace(std::string filename, std::function<Event (std::string)> readLine)
 {
     std::ifstream data(filename);
     std::vector<Event> events;
@@ -310,7 +310,7 @@ Event ssd::read_event_simple(std::string line)
     return Event(type, startAddress, 1, 0);
 }
 
-Event ssd::read_event_BIOtracer(std::string line)
+Event read_event_BIOtracer(std::string line)
 {
     const char delim = '\t';
     std::stringstream  lineStream(line);

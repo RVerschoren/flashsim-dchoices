@@ -3,6 +3,7 @@ HCident/oracle_hcid.cpp
 HCident/static_hcid.cpp
 run_SimDWF.cpp
 run_SimDWFTrace.cpp
+run_SimHCWF.cpp
 run_SimSWF.cpp
 run_test_dwf.cpp
 verification.cpp

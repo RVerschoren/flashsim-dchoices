@@ -541,7 +541,7 @@ private:
     bool noop;
 };
 
-std::vector<Event> read_event_from_trace(std::string fileName, const std::function<Event (const std::string&)> &readLine);
+std::vector<Event> read_event_from_trace(std::string fileName, std::function<Event (std::string)> readLine);
 std::vector<bool> read_oracle(const std::string filename);
 Event read_event_simple(std::string line);
 Event read_event_BIOtracer(std::string line);
@@ -1217,19 +1217,20 @@ public:
     enum status write(Event &event);
     enum status trim(Event &event);
 private:
-    enum status erase_victim(Event &event, const Address & victim, std::vector<ulong> &validLPNs);
-    enum status copy_to_block(Event &event, double startTime, const std::vector<ulong> &validLPNs, const Address &block, const Block *blockPtr);
+    enum status erase_victim(Event &event, Address &victim, std::vector<ulong> &validLPNs);
+    enum status copy_to_block(Event &event, double startTime, const std::vector<ulong> &validLPNs, Address &block, const Block *blockPtr);
     enum status copy_to_blocks(Event &event, double startTime, const std::vector<ulong> &validLPNs, uint freeInBlock1,
-                                                                                        const Address &block1, const Block *block1Ptr, const Address &block2, const Block *block2Ptr);
+                                                                                        Address &block1, const Block *block1Ptr, Address &block2, const Block *block2Ptr);
 
-    ulong maxLBA;
-    ulong maxHotBlocks;
+    ulong numLPN;
+    uint numHotBlocks;
+    uint maxHotBlocks;
     Block *CWFPtr; // Cold WF
     Address CWF;
     Block *HWFPtr; // Hot WF
     Address HWF;
-    std::vector<Address> map;
-    HotColdID *hcID;
+    std::map<ulong, Address> map;
+    Static_HCID hcID;
     std::vector< std::vector< std::vector< std::vector<bool> > > > blockIsHot;
 };
 

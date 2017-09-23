@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     /// Override with command line settings
     BLOCK_SIZE = std::atoi(argv[1]);
     DCHOICES_D = std::atoi(argv[2]);
-    SPARE_FACTOR = 1.0 - std::atof(argv[3]);
+    SPARE_FACTOR = std::atof(argv[3]);
     HOT_FRACTION = std::atof(argv[4]);//f
     HOT_REQUEST_RATIO = std::atof(argv[5]);//r
     const uint startrun = std::atoi(argv[6]); //startrun
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     sstr << "hcwf";
     sstr << "-b" << std::setw(2) << BLOCK_SIZE;
     sstr << "-d" << std::setw(3) << DCHOICES_D;
-    sstr << "-rho" << std::setw(4) << std::setprecision(2) << std::atof(argv[3]);
+    sstr << "-sf" << std::setw(4) << std::setprecision(2) << SPARE_FACTOR;
     sstr << "-r" << std::setw(5) << std::setprecision(3) << HOT_REQUEST_RATIO;
     sstr << "-f" << std::setw(5) << std::setprecision(3) << HOT_FRACTION;
     std::string fileName = sstr.str();
@@ -70,7 +70,6 @@ int main(int argc, char *argv[])
                                                 RandNrGen::getInstance().get(maxHotLPN) : maxHotLPN+RandNrGen::getInstance().get(maxColdLPN);
             ssd.event_arrive(WRITE, lpn, 1, (double) 1+(2500*i++));//Timings don't really matter for PE fairness/SSD endurance
         }
-        //ssd.print_statistics();
         ssd.write_statistics_csv(fileName, run);
     }
     return 0;

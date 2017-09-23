@@ -23,13 +23,13 @@ all: $(PROGRAMS)
 
 define PROGRAM_TEMPLATE
   $1 : run_$1.o $$(OBJECTS_SSDLIB)
-	$$(CXX) $$(LDFLAGS) $$< $$(OBJECTS_SSDLIB) -o $$@
+	$$(CXX) $$(LDFLAGS) $$< $$(OBJECTS_SSDLIB) -o $1.exe ${@:2}
 endef
 
 $(foreach prog,$(PROGRAMS),$(eval $(call PROGRAM_TEMPLATE,$(prog))))
 
 clean:
-	-rm -rf *.o FTLs/*.o GCAs/*.o util/*.o $(PROGRAMS)
+	-rm -rf *.o FTLs/*.o GCAs/*.o util/*.o $(PROGRAMS) *.exe
 
 .PHONY: files
 files:

@@ -68,7 +68,7 @@ void Stats::reset()
     numCacheFaults = 0;
 
     // Possible SSD performance measures
-    currentPE = 0;
+    currentPE = BLOCK_ERASES;
     PEfairness.clear();
     PEfairness.push_back(0.0); // Initial data point
     SSDendurance.clear();
@@ -233,7 +233,7 @@ void next_GC_invocation(const uint validPages, const uint hotValidPages, const b
 
 void Stats::next_currentPE(const HotColdID *hcID)
 {
-    currentPE++;
+    currentPE--;
     PEfairness.push_back(numGCErase / (double)(PLANE_SIZE*currentPE));
     SSDendurance.push_back(numFTLWrite/ (double)(PLANE_SIZE*BLOCK_SIZE));
     //if(hcID != nullptr)

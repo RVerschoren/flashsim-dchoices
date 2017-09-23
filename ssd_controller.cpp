@@ -85,7 +85,8 @@ Controller::~Controller(void)
     return;
 }
 
-void Controller::initialize(){
+void Controller::initialize()
+{
     ftl->initialize();
     return;
 }

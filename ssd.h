@@ -307,7 +307,7 @@ class FtlImpl_DftlParent;
 class FtlImpl_Dftl;
 class FtlImpl_BDftl;
 class FtlImpl_DWF;
-//class FtlImpl_HCWF;
+class FtlImpl_HCWF;
 class Ram;
 class Controller;
 class Ssd;
@@ -621,6 +621,7 @@ public:
     ~Page(void);
     enum status _read(Event &event);
     enum status _write(Event &event);
+    enum status _write(Event &event, const ulong lpn); //Increase time in event, but use lpn; useful for copying
     const Block &get_parent(void) const;
     enum page_state get_state(void) const;
     void set_state(enum page_state state);
@@ -648,6 +649,7 @@ public:
     enum status write(Event &event, uint &pageNr);
     enum status replace(Event &event);
     enum status _erase(Event &event);
+    enum status _erase_and_copy(Event &event, Address &copyBlock, Block *copyBlockPtr, std::function<void (const ulong, const Address&)> modifyFTL, std::function<void (const ulong, const uint pageNr)> modifyFTLPage);
     const Plane &get_parent(void) const;
     uint get_pages_valid(void) const;
     uint get_pages_invalid(void) const;
@@ -677,6 +679,9 @@ private:
     double last_erase_time;
     double erase_delay;
     double modification_time;
+
+    uint min_seek_empty;
+    std::map<ulong,uint> block_map;
 
     block_type btype;
 };
@@ -1193,10 +1198,13 @@ public:
     enum status write(Event &event);
     enum status trim(Event &event);
 private:
-    enum status erase_victim(Event &event, Address & victim,  std::vector<ulong> &validLPNs);
-    enum status copy_to_block(Event &event, double startTime, const std::vector<ulong> &validLPNs, Address &block, const Block *blockPtr);
-    enum status copy_to_blocks(Event &event, double startTime, const std::vector<ulong> &validLPNs, uint freeInBlock1,
-                                                                                        Address &block1, const Block *block1Ptr, Address &block2, const Block *block2Ptr);
+    void modify_ftl(const ulong lpn, const Address &address);
+    void modify_ftl_page(const ulong lpn, const uint newPage);
+
+    // Correctness verification
+    void check_ftl_integrity(const ulong writtenLPN);
+    void check_valid_pages(const ulong numLPN);
+    void check_hot_pages(Address block, Block *blockPtr, const uint hotPages);
 
     ulong numLPN; // Number of unique LPNs in the map
     Block *WFIPtr; // External WF
@@ -1205,6 +1213,7 @@ private:
     Address WFE;
     std::map<ulong, Address> map;
     Static_HCID hcID;
+    std::vector< std::vector< std::vector< std::vector<uint> > > > hotValidPages;
 };
 
 class FtlImpl_HCWF : public FtlParent
@@ -1217,10 +1226,10 @@ public:
     enum status write(Event &event);
     enum status trim(Event &event);
 private:
-    enum status erase_victim(Event &event, Address &victim, std::vector<ulong> &validLPNs);
-    enum status copy_to_block(Event &event, double startTime, const std::vector<ulong> &validLPNs, Address &block, const Block *blockPtr);
-    enum status copy_to_blocks(Event &event, double startTime, const std::vector<ulong> &validLPNs, uint freeInBlock1,
-                                                                                        Address &block1, const Block *block1Ptr, Address &block2, const Block *block2Ptr);
+    //Correctness verification
+    void check_valid_pages(const ulong numLPN);
+    void check_block_hotness();
+    void check_ftl_hotness_integrity();
 
     ulong numLPN;
     uint numHotBlocks;

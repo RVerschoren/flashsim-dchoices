@@ -1,8 +1,9 @@
-CXX=g++
-CXXFLAGS=-Wall -c -std=c++11  -g -pg
-LDFLAGS= -pg
-#CXXFLAGS=-Wall -c -std=c++11 -O3 -DNDEBUG
-#LDFLAGS=
+CXX=g++-4.9
+#CXXFLAGS=-Wall -c -std=c++11  -g -pg -DUSE_BLOCKMGR -DCHECK_VALID_PAGE -DCHECK_HOT_VALID_PAGES
+#CXXFLAGS=-Wall -c -std=c++11 -g -pg -O2 -DUSE_BLOCKMGR
+#LDFLAGS= -pg
+CXXFLAGS=-Wall -c -std=c++11 -O3 -DNDEBUG -DUSE_BLOCKMGR
+LDFLAGS=
 HEADERS=ssd.h
 SOURCES_SSDLIB = $(filter-out ssd_ftl.cpp, $(wildcard ssd_*.cpp))  \
                  $(wildcard FTLs/*.cpp)                            \

@@ -45,9 +45,9 @@ int main(int argc, char *argv[])
     GC_ALGORITHM = 3;
     std::vector<Event> events = read_event_from_trace(traceFile, ssd::read_event_simple);
 
-    const ulong maxLPN = std::floor((1.0-SPARE_FACTOR)*BLOCK_SIZE*PLANE_SIZE*DIE_SIZE*PACKAGE_SIZE*SSD_SIZE);
-    const ulong maxHotLPN = std::floor(HOT_FRACTION*maxLPN);
-    const ulong maxColdLPN = maxLPN-maxHotLPN;
+    //const ulong maxLPN = std::floor((1.0-SPARE_FACTOR)*BLOCK_SIZE*PLANE_SIZE*DIE_SIZE*PACKAGE_SIZE*SSD_SIZE);
+    //const ulong maxHotLPN = std::floor(HOT_FRACTION*maxLPN);
+    //onst ulong maxColdLPN = maxLPN-maxHotLPN;
 
     //Example format filename : 'dwf-b',I2,'-d',I3,'-rho',F4.2,'-r',F5.3,'-f',F5.3,'-WA.',I2,'.csv';
     std::stringstream sstr;

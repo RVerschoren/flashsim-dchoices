@@ -34,8 +34,8 @@ int main(int argc, char *argv[])
     const uint startrun = std::atoi(argv[6]); //startrun
     const uint nruns = std::atoi(argv[7]); //Number of runs
     PLANE_SIZE = std::atoi(argv[8]);
-    const ulong maxPE = std::atoi(argv[9]); // Maximum number of PE cycles
     BLOCK_ERASES = 10000000;
+    const ulong maxPE = BLOCK_ERASES - std::atoi(argv[9]); // Maximum number of PE cycles, counting back
 
     // DWF
     FTL_IMPLEMENTATION = 6;
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 
         const Controller &ctrl = ssd.get_controller();
         uint i = 0;
-        while(ctrl.stats.get_currentPE() <= maxPE)
+        while(ctrl.stats.get_currentPE() > maxPE)
         {
 
             const ulong lpn = (RandNrGen::getInstance().get() <= HOT_REQUEST_RATIO)?

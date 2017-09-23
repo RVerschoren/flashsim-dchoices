@@ -37,7 +37,6 @@ int main(int argc, char *argv[])
     printf("\n");
 
     const uint maxLPN= std::floor((1.0-SPARE_FACTOR)*BLOCK_SIZE*PLANE_SIZE*DIE_SIZE*PACKAGE_SIZE*SSD_SIZE);
-    bool unreported = true;
 
     //Example format filename : 'swf-b',I2,'-d',I3,'-rho',F4.2,'-r',F5.3,'-f',F5.3,'-WA.',I2,'.csv';
     std::stringstream sstr;

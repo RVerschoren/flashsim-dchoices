@@ -35,7 +35,8 @@ int main()
     {
         if(i % 100 == 0) std::cout << "ITERATION : " << i << std::endl;
         /* event_arrive(event_type, logical_address, size, start_time) */
-        double result = ssd.event_arrive(WRITE, i%maxLBA, 1, (double) 1+(2500*i));
+        //double result =
+        ssd.event_arrive(WRITE, i%maxLBA, 1, (double) 1+(2500*i));
     }
 
     ssd.print_statistics();

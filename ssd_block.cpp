@@ -26,6 +26,7 @@
 #include <new>
 #include <assert.h>
 #include <stdio.h>
+#include <functional>
 #include "ssd.h"
 
 using namespace ssd;
@@ -52,7 +53,9 @@ Block::Block(const Plane &parent, uint block_size, ulong erases_remaining, doubl
     last_erase_time(0.0),
     erase_delay(erase_delay),
 
-    modification_time(-1)
+    modification_time(-1),
+
+    min_seek_empty(0)
 
 {
     uint i;
@@ -156,12 +159,72 @@ enum status Block::_erase(Event &event)
         pages_valid = 0;
         pages_invalid = 0;
         state = FREE;
+        min_seek_empty = 0;
 
         if(FTL_USE_BLOCKMANAGER) Block_manager::instance()->update_block(this);
     }
 
     return SUCCESS;
 }
+
+enum status Block::_erase_and_copy(Event &event, Address &copyBlock, Block *copyBlockPtr, std::function<void (const ulong, const Address&)> modifyFTL, std::function<void (const ulong, const uint pageNr)> modifyFTLPage)
+{
+    assert(data != NULL && erase_delay >= 0.0);
+    uint i;
+
+    if(erases_remaining < 1)
+    {
+        fprintf(stderr, "Block error: %s: No erases remaining when attempting to erase\n", __func__);
+        return FAILURE;
+    }
+
+    uint copyPage = 0;
+    min_seek_empty = 0;
+    pages_valid = 0;
+    pages_invalid = 0;
+    state = FREE;
+    for(i = 0; i < size; i++)
+    {
+        if(data[i].get_state() == VALID)
+        {
+            const ulong lpn = data[i].get_logical_address();
+            if(copyBlockPtr->get_next_page(copyPage) == SUCCESS)
+            {
+                copyBlockPtr->data[copyPage]._write(event, lpn);
+                copyBlockPtr->pages_valid++;
+                copyBlockPtr->state = ACTIVE;
+
+                copyBlock.page = copyPage;
+                modifyFTL(lpn,copyBlock);
+
+                data[i].set_state(EMPTY);
+            }else{
+                data[min_seek_empty]._write(event, data[i].get_logical_address());
+                pages_valid++;
+                state = ACTIVE;
+
+                if(i != min_seek_empty) data[i].set_state(EMPTY); //Could be we just copy page by page
+
+                modifyFTLPage(lpn,min_seek_empty); //Same block, different page
+
+                min_seek_empty++;
+            }
+        }else{
+            data[i].set_state(EMPTY);
+        }
+    }
+
+    event.incr_time_taken(erase_delay);
+    last_erase_time = event.get_start_time() + event.get_time_taken();
+    erases_remaining--;
+
+    #ifndef USE_BLOCKMGR
+        Block_manager::instance()->update_block(this);
+    #endif
+
+    return SUCCESS;
+}
+
 
 const Plane &Block::get_parent(void) const
 {
@@ -225,8 +288,6 @@ void Block::invalidate_page(uint page)
     if (data[page].get_state() == INVALID )
         return;
 
-    //assert(data[page].get_state() == VALID);
-
     if(data[page].get_state() == VALID) pages_valid--;
     pages_invalid++;
     data[page].set_state(INVALID);
@@ -253,18 +314,39 @@ double Block::get_modification_time(void) const
  * method is called by write and erase methods and in Plane::get_next_page() */
 enum status Block::get_next_page(Address &address) const
 {
-    for(uint i = 0; i < size; i++)
+    for(uint i = min_seek_empty; i < size; i++)
     {
         if(data[i].get_state() == EMPTY)
         {
+            #ifndef USE_BLOCKMGR
             address.set_linear_address(i + physical_address - physical_address % BLOCK_SIZE, PAGE);
+            #endif
             address.page = i;
             address.valid = PAGE;
+            const_cast<Block*>(this)->min_seek_empty  = i; //Shush away the constness in exchange for lookup speed in the future
             return SUCCESS;
         }
     }
     return FAILURE;
 }
+
+enum status Block::get_next_page(uint &pageNr) const
+{
+    for(uint i = min_seek_empty; i < size; i++)
+    {
+        if(data[i].get_state() == EMPTY)
+        {
+            #ifndef USE_BLOCKMGR
+            address.set_linear_address(i + physical_address - physical_address % BLOCK_SIZE, PAGE);
+            #endif
+            pageNr = i;
+            const_cast<Block*>(this)->min_seek_empty  = i; //Shush away the constness in exchange for lookup speed in the future
+            return SUCCESS;
+        }
+    }
+    return FAILURE;
+}
+
 
 long Block::get_physical_address(void) const
 {

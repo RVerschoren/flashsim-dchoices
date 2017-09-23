@@ -28,6 +28,11 @@
 
 using namespace ssd;
 
+ulong block_address_to_linear_address(const Address &address)
+{
+    return address.block + PLANE_SIZE*(address.plane + DIE_SIZE*(address.die + PACKAGE_SIZE*address.package));
+}
+
 void FtlImpl_HCWF::initialize()
 {
     // Just assume for now that we have PAGE validity, we'll check it later anyway
@@ -37,7 +42,7 @@ void FtlImpl_HCWF::initialize()
 
     ///@TODO  Review how to determine first cold block when not assuming 1 plane
     const double f = HOT_FRACTION;
-    const uint maxHotBlocks = std::ceil(f*PLANE_SIZE) + 1;
+    maxHotBlocks = std::ceil(f*PLANE_SIZE) + 1;
     const uint numColdBlocks = PLANE_SIZE - maxHotBlocks;
     CWF = Address(0,0,0,maxHotBlocks,0,PAGE);
     CWFPtr = controller.get_block_pointer(CWF);
@@ -54,10 +59,13 @@ void FtlImpl_HCWF::initialize()
             }
         }
     }
+    blockIsHot[HWF.package][HWF.die][HWF.plane][HWF.block] = true;
+    blockIsHot[CWF.package][CWF.die][CWF.plane][CWF.block] = false;
     assert(numHotBlocks <= maxHotBlocks);
+    assert(numHotBlocks <= PLANE_SIZE);
 
     /// Initialize at random
-    for(unsigned int lpn = 0; lpn < map.size(); lpn++)
+    for(unsigned int lpn = 0; lpn < numLPN; lpn++)
     {
         bool success = false;
         const bool lpnIsHot = hcID.is_hot(lpn);
@@ -86,12 +94,20 @@ void FtlImpl_HCWF::initialize()
             }
         }
     }
+    #ifdef CHECK_VALID_PAGES
+    check_valid_pages(numLPN);
+    #endif
+    #ifndef NDEBUG
+    check_block_hotness();
+    check_ftl_hotness_integrity();
+    #endif
 
 }
 
 
 FtlImpl_HCWF::FtlImpl_HCWF(Controller &controller):
-    FtlParent(controller), numLPN((1.0-SPARE_FACTOR)*BLOCK_SIZE*PLANE_SIZE*DIE_SIZE*PACKAGE_SIZE), map(), hcID(numLPN,HOT_FRACTION)
+    FtlParent(controller), numLPN((1.0-SPARE_FACTOR)*BLOCK_SIZE*PLANE_SIZE*DIE_SIZE*PACKAGE_SIZE), map(),
+    hcID(numLPN,HOT_FRACTION), blockIsHot(SSD_SIZE,  std::vector<std::vector<std::vector<bool> > >(PACKAGE_SIZE, std::vector<std::vector<bool> >(DIE_SIZE, std::vector<bool>(PLANE_SIZE,false))))
 {
     return;
 }
@@ -110,120 +126,14 @@ enum status FtlImpl_HCWF::read(Event &event)
     return SUCCESS;
 }
 
-enum status FtlImpl_HCWF::erase_victim(Event &event, Address & victim, std::vector<ulong> &validLPNs){
-    #ifndef NDEBUG
-    std::cout << "ERASE" << std::endl;
-    #endif
-    double startTime = event.get_start_time();
-    for(uint p = 0; p < BLOCK_SIZE; p++){
-        //Pretend to read the data to copy it
-        Event readEvent(READ, event.get_logical_address(), 1, startTime);
-        victim.page = p;
-        victim.valid = PAGE;
-        readEvent.set_address(victim);
-
-        if(controller.issue(readEvent) == SUCCESS){//Page is valid?
-            event.incr_time_taken(readEvent.get_time_taken());
-            startTime += readEvent.get_time_taken();
-            const ulong lpn = controller.get_page_pointer(victim)->get_logical_address();
-            validLPNs.push_back(lpn);//Sneakily get the LPN behind the controller's back
-        }
-    }
-    /// Erase the victim block
-    Event eraseEvent(ERASE, event.get_logical_address(), 1, event.get_start_time());
-    eraseEvent.set_address(victim);
-
-    enum status eraseStatus = controller.issue(eraseEvent);
-    if(eraseStatus == FAILURE){
-        printf("Erase failed");
-    }
-    event.incr_time_taken(eraseEvent.get_time_taken());
-
-    return eraseStatus;
-}
-
-
-enum status FtlImpl_HCWF::copy_to_block(Event &event, double startTime, const std::vector<ulong> &validLPNs, Address &block, const Block *blockPtr)
-{
-    return copy_to_blocks(event, startTime, validLPNs, validLPNs.size(), block, blockPtr, block, blockPtr);
-}
-
-enum status FtlImpl_HCWF::copy_to_blocks(Event &event, double startTime, const std::vector<ulong> &validLPNs, uint freeInBlock1,
-                                                                                    Address &block1, const Block *block1Ptr, Address &block2, const Block *block2Ptr)
-{
-    #ifndef NDEBUG
-    std::cout << "COPY" << std::endl;
-    #endif
-    /// Copy everything back!
-    for(uint p = 0; p < freeInBlock1; p++){
-        //Pretend to read the data to copy it
-        Event copyEvent(WRITE, validLPNs[p], 1, startTime);
-        if(block1Ptr->get_next_page(block1) == SUCCESS){
-            assert(controller.get_page_pointer(block1)->get_state() == EMPTY);
-            copyEvent.set_address(block1);
-
-            assert(block1.block == copyEvent.get_address().block);
-            assert(block1.page == copyEvent.get_address().page);
-            if(controller.issue(copyEvent) == SUCCESS){
-                event.incr_time_taken(copyEvent.get_time_taken());
-                startTime += copyEvent.get_time_taken();
-                map[validLPNs[p]] = block1;
-            }else{
-                assert(false);
-                return FAILURE;
-            }
-        }else{
-            assert(false);
-            return FAILURE;
-        }
-    }
-    for(uint p = freeInBlock1; p < validLPNs.size() ; p++){
-        //Pretend to read the data to copy it
-        Event copyEvent(WRITE, validLPNs[p], 1, startTime);
-        if(block2Ptr->get_next_page(block2) == SUCCESS){
-            assert(controller.get_page_pointer(block2)->get_state() == EMPTY);
-            copyEvent.set_address(block2);
-
-            assert(block2.block == copyEvent.get_address().block);
-            assert(block2.page == copyEvent.get_address().page);
-            if(controller.issue(copyEvent) == SUCCESS){
-                event.incr_time_taken(copyEvent.get_time_taken());
-                startTime += copyEvent.get_time_taken();
-                map[validLPNs[p]] = block2;
-            }else{
-                assert(false);
-                return FAILURE;
-            }
-        }else{
-            assert(false);
-            return FAILURE;
-        }
-    }
-    return SUCCESS;
-}
-
 enum status FtlImpl_HCWF::write(Event &event)
 {
+    #ifdef CHECK_VALID_PAGES
+    check_valid_pages(numLPN);
+    #endif
     #ifndef NDEBUG
-        uint numPages = 0;
-        std::cout << "NUMPAGES " << event.get_logical_address() << std::endl;
-        for(uint package = 0; package < SSD_SIZE; package++){
-            for(uint die = 0; die < PACKAGE_SIZE; die++){
-                for(uint plane = 0; plane < DIE_SIZE; plane++){
-                    for(uint b = 0; b < PLANE_SIZE; b++){
-                        std::cout << "    BLOCK" << b << std::endl;
-                        for(uint p = 0; p < BLOCK_SIZE; p++){
-                            Address addr(package,die,plane,b,p,PAGE);
-                            if(controller.get_page_pointer(addr)->get_state() == VALID){
-                                std::cout << "\t" << p << " : " << controller.get_page_pointer(addr)->get_logical_address() << std::endl;
-                                numPages++;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        assert(numPages == numLPN);
+    check_block_hotness();
+    check_ftl_hotness_integrity();
     #endif
     controller.stats.numFTLWrite++;
     const ulong lpn = event.get_logical_address();
@@ -233,80 +143,123 @@ enum status FtlImpl_HCWF::write(Event &event)
 
     const bool lpnIsHot = hcID.is_hot(lpn);
 
-    while(HWFPtr->get_next_page(HWF) != SUCCESS or CWFPtr->get_next_page(CWF) != SUCCESS)//Still space in WF
+    while( (lpnIsHot and HWFPtr->get_next_page(HWF) != SUCCESS)
+           or (not lpnIsHot and CWFPtr->get_next_page(CWF) != SUCCESS) )//Still space in WF
     {
         const bool HWFInitiated = HWFPtr->get_next_page(HWF) != SUCCESS; // HWF initiated cleaning cycle
+
+        assert(not HWFInitiated or HWFPtr->get_pages_empty() == 0);
+        assert(HWFInitiated or CWFPtr->get_pages_empty() == 0);
+
         //Need to select a victim block through GC
         Address  victim = map[lpn];
         Block *victimPtr;
         do {
             garbage->collect(victim);
             victimPtr = controller.get_block_pointer(victim);
-        } while(victimPtr != HWFPtr and victimPtr != CWFPtr);
+        } while(victimPtr == HWFPtr or victimPtr == CWFPtr);
+
         const bool victimIsHot = blockIsHot[victim.package][victim.die][victim.plane][victim.block];
 
         const uint j = victimPtr->get_pages_valid();
         assert(j <= BLOCK_SIZE);
-        const uint k = HWFInitiated? CWFPtr->get_pages_empty() : HWFPtr->get_pages_empty();
-        assert(k <= BLOCK_SIZE);
+        //const uint k = HWFInitiated? CWFPtr->get_pages_empty() : HWFPtr->get_pages_empty();
+        //assert(k <= BLOCK_SIZE);
 
-        std::vector<ulong> victimValidLPNs;
-        enum status eraseStatus = erase_victim(event,  victim, victimValidLPNs);
-
-        controller.stats.numGCRead += victimValidLPNs.size();
+        controller.stats.numGCRead += j;
         controller.stats.numGCErase++;
-        controller.stats.victimValidDist[victimValidLPNs.size()] = controller.stats.victimValidDist[victimValidLPNs.size()] + 1;
-
-
+        controller.stats.victimValidDist[j] = controller.stats.victimValidDist[j] + 1;
+        //std::cout << "\t moving " << j << " pages"<<std::endl;
         if(HWFInitiated)
         {
             if(victimIsHot)
             {
-                enum status copyStatus = copy_to_block(event, event.get_start_time()+event.get_time_taken(), victimValidLPNs,
-                                                                                           victim, victimPtr);
-            }else if(j <= k){ // Sufficient space to copy everything to otherWF
-                enum status copyStatus = copy_to_block(event, event.get_start_time()+event.get_time_taken(), victimValidLPNs,
-                                                                                               CWF,CWFPtr);
+                victimPtr->_erase_and_copy(event, HWF, HWFPtr, //Copy to self
+                                           [this,&victim](const ulong lpn, const Address &addr) {
+                                                map[lpn] = addr;
+                                            },
+                                           [this](const ulong lpn, const uint newPage) {
+                                                map[lpn].page = newPage;
+                                            }
+                );
                 /// Victim replaces the correct WF
                 HWF = victim;
                 HWFPtr =victimPtr;
+            }else if(j <= CWFPtr->get_pages_empty()){ // Sufficient space to copy everything to CWF
+                victimPtr->_erase_and_copy(event, CWF, CWFPtr, //Copy to CWF where possible
+                                           [this,&victim](const ulong lpn, const Address &addr) {
+                                                map[lpn] = addr;
+                                            },
+                                           [this](const ulong lpn, const uint newPage) {
+                                                map[lpn].page = newPage;
+                                            }
+                );
+                /// Victim replaces the correct WF
+                HWF = victim;
+                HWFPtr =victimPtr;
+                blockIsHot[victim.package][victim.die][victim.plane][victim.block] = true;
+                numHotBlocks++;
             } else {
-                enum status copyStatus = copy_to_blocks(event, event.get_start_time()+event.get_time_taken(), victimValidLPNs,k,
-                                                                                               CWF, CWFPtr, victim, victimPtr);
+                victimPtr->_erase_and_copy(event, CWF, CWFPtr, //Copy to CWF where possible
+                                           [this,&victim](const ulong lpn, const Address &addr) {
+                                                map[lpn] = addr;
+                                            },
+                                           [this](const ulong lpn, const uint newPage) {
+                                                map[lpn].page = newPage;
+                                            }
+                );
                 /// Victim replaces the other WF
                 CWF = victim;
                 CWFPtr =victimPtr;
-                blockIsHot[victim.package][victim.die][victim.plane][victim.block] = false;
-                numHotBlocks--;
             }
 
         }else{ // CWF was full
             if(not victimIsHot)
             {
-                enum status copyStatus = copy_to_block(event, event.get_start_time()+event.get_time_taken(), victimValidLPNs,
-                                                                                           victim, victimPtr);
-            }else if(j <= k){ // Sufficient space to copy everything to otherWF
-                enum status copyStatus = copy_to_block(event, event.get_start_time()+event.get_time_taken(), victimValidLPNs,
-                                                                                               HWF,HWFPtr);
+                victimPtr->_erase_and_copy(event, CWF, CWFPtr, //Copy to self
+                                           [this,&victim](const ulong lpn, const Address &addr) {
+                                                map[lpn] = addr;
+                                            },
+                                           [this](const ulong lpn, const uint newPage) {
+                                                map[lpn].page = newPage;
+                                            }
+                );
                 /// Victim replaces the correct WF
                 CWF = victim;
                 CWFPtr =victimPtr;
+            }else if(j <= HWFPtr->get_pages_empty()){ // Sufficient space to copy everything to HWF
+                victimPtr->_erase_and_copy(event, HWF, HWFPtr, //Copy to HWF where possible
+                                           [this,&victim](const ulong lpn, const Address &addr) {
+                                                map[lpn] = addr;
+                                            },
+                                           [this](const ulong lpn, const uint newPage) {
+                                                map[lpn].page = newPage;
+                                            }
+                );
+                /// Victim replaces the correct WF
+                CWF = victim;
+                CWFPtr =victimPtr;
+                blockIsHot[victim.package][victim.die][victim.plane][victim.block] = false;
+                numHotBlocks--;
             } else {
-                enum status copyStatus = copy_to_blocks(event, event.get_start_time()+event.get_time_taken(), victimValidLPNs,k,
-                                                                                               HWF, HWFPtr, victim, victimPtr);
+                victimPtr->_erase_and_copy(event, HWF, HWFPtr, //Copy to HWF where possible
+                                           [this,&victim](const ulong lpn, const Address &addr) {
+                                                map[lpn] = addr;
+                                            },
+                                           [this](const ulong lpn, const uint newPage) {
+                                                map[lpn].page = newPage;
+                                            }
+                );
                 /// Victim replaces the other WF
                 HWF = victim;
                 HWFPtr =victimPtr;
-                blockIsHot[victim.package][victim.die][victim.plane][victim.block] = true;
-                numHotBlocks++;
             }
         }
-
-        controller.stats.numGCWrite += victimValidLPNs.size();
-        const ulong numErasesOfVictim = BLOCK_ERASES - victimPtr->get_erases_remaining();
-        if(controller.stats.get_currentPE() < numErasesOfVictim){
+        controller.stats.numGCWrite += j;
+        if(controller.stats.get_currentPE() >= victimPtr->get_erases_remaining()){
             controller.stats.next_currentPE();
         }
+
     }
     if(lpnIsHot)
     {
@@ -317,6 +270,9 @@ enum status FtlImpl_HCWF::write(Event &event)
         map[lpn] = CWF;
     }
 
+    #ifdef CHECK_VALID_PAGES
+    check_valid_pages(numLPN);
+    #endif
 
     return SUCCESS;
 }
@@ -330,3 +286,54 @@ enum status FtlImpl_HCWF::trim(Event &event)
     //get_block_pointer(map[lpn])->invalidate_page(map[lpn].page);//Should we do this here?
     return SUCCESS;
 }
+
+
+
+void FtlImpl_HCWF::check_valid_pages(const ulong numLPN)
+{
+    uint numPages = 0;
+    for(uint package = 0; package < SSD_SIZE; package++){
+        for(uint die = 0; die < PACKAGE_SIZE; die++){
+            for(uint plane = 0; plane < DIE_SIZE; plane++){
+                for(uint b = 0; b < PLANE_SIZE; b++){
+                    //std::cout << "    BLOCK" << b << std::endl;
+                    for(uint p = 0; p < BLOCK_SIZE; p++){
+                        Address addr(package,die,plane,b,p,PAGE);
+                        if(controller.get_page_pointer(addr)->get_state() == VALID){
+                            //std::cout << "\t" << p << " : " << controller.get_page_pointer(addr)->get_logical_address() << std::endl;
+                            numPages++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert(numPages == numLPN);
+}
+
+void FtlImpl_HCWF::check_block_hotness()
+{
+    uint numBlocks= 0;
+    for(uint package = 0; package < SSD_SIZE; package++){
+        for(uint die = 0; die < PACKAGE_SIZE; die++){
+            for(uint plane = 0; plane < DIE_SIZE; plane++){
+                for(uint b = 0; b < PLANE_SIZE; b++){
+                        if(blockIsHot[package][die][plane][b]) numBlocks++;
+                }
+            }
+        }
+    }
+    assert(numBlocks == numHotBlocks);
+}
+
+void FtlImpl_HCWF::check_ftl_hotness_integrity()
+{
+    for(std::pair<ulong,Address> pair : map)
+    {
+        const ulong lpn = pair.first;
+        const Address &addr = pair.second;
+        assert(blockIsHot[addr.package][addr.die][addr.plane][addr.block] == hcID.is_hot(lpn));
+    }
+}
+
+

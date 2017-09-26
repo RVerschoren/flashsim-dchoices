@@ -43,7 +43,7 @@ bool Oracle_HCID::is_hot(const ulong lpn) const
     return requestHotness[currentRequest];
 }
 
-bool Oracle_HCID::next_request()
+void Oracle_HCID::next_request()
 {
     currentRequest = (currentRequest + 1) % numRequests;
 }

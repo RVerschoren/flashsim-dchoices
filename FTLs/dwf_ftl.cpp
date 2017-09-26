@@ -57,7 +57,7 @@ void FtlImpl_DWF::initialize()
                 evt.set_address(addr);
                 block->write(evt);
                 map[lpn] = addr;
-                if(hcID.is_hot(lpn))
+                if(hcID->is_hot(lpn))
                 {
                     hotValidPages[addr.package][addr.die][addr.plane][addr.block]++;
                 }
@@ -67,7 +67,7 @@ void FtlImpl_DWF::initialize()
     }
 }
 
-void FtlImpl_DWF::initialize(const std::vector<Event> &events)
+/*void FtlImpl_DWF::initialize(const std::vector<Event> &events)
 {
     // Just assume for now that we have PAGE validity, we'll check it later anyway
     Address addr(0,0,0,0,0,PAGE);
@@ -107,12 +107,12 @@ void FtlImpl_DWF::initialize(const std::vector<Event> &events)
             }
         }
     }
-}
+}*/
 
 
-FtlImpl_DWF::FtlImpl_DWF(Controller &controller):
+FtlImpl_DWF::FtlImpl_DWF(Controller &controller, HotColdID *hcID):
     FtlParent(controller), numLPN((1.0-SPARE_FACTOR)*BLOCK_SIZE*PLANE_SIZE*DIE_SIZE*PACKAGE_SIZE), map(),
-    hcID(numLPN,HOT_FRACTION), hotValidPages(SSD_SIZE,  std::vector<std::vector<std::vector<uint> > >(PACKAGE_SIZE, std::vector<std::vector<uint> >(DIE_SIZE, std::vector<uint>(PLANE_SIZE,0))))
+    hcID(hcID), hotValidPages(SSD_SIZE,  std::vector<std::vector<std::vector<uint> > >(PACKAGE_SIZE, std::vector<std::vector<uint> >(DIE_SIZE, std::vector<uint>(PLANE_SIZE,0))))
 {
     return;
 }
@@ -155,7 +155,7 @@ enum status FtlImpl_DWF::write(Event &event)
 
     ///Invalidate previous page
     get_block_pointer(map[lpn])->invalidate_page(map[lpn].page);
-    if(hcID.is_hot(lpn))
+    if(hcID->is_hot(lpn))
     {
         hotValidPages[map[lpn].package][map[lpn].die][map[lpn].plane][map[lpn].block]--;
     }
@@ -185,7 +185,7 @@ enum status FtlImpl_DWF::write(Event &event)
             victimPtr->_erase_and_copy(event, WFI, WFIPtr,
                                        [this,&victim](const ulong lpn, const Address &addr) {
                                             modify_ftl(lpn,addr);
-                                            if(hcID.is_hot(lpn))
+                                            if(hcID->is_hot(lpn))
                                             {
                                                 hotValidPages[victim.package][victim.die][victim.plane][victim.block]--;
                                                 hotValidPages[addr.package][addr.die][addr.plane][addr.block]++;
@@ -206,7 +206,7 @@ enum status FtlImpl_DWF::write(Event &event)
             victimPtr->_erase_and_copy(event, WFI, WFIPtr,
                                        [this,&victim](const ulong lpn, const Address &addr) {
                                             modify_ftl(lpn,addr);
-                                            if(hcID.is_hot(lpn))
+                                            if(hcID->is_hot(lpn))
                                             {
                                                 hotValidPages[victim.package][victim.die][victim.plane][victim.block]--;
                                                 hotValidPages[addr.package][addr.die][addr.plane][addr.block]++;
@@ -235,7 +235,7 @@ enum status FtlImpl_DWF::write(Event &event)
 
     event.set_address(WFE);//Tell WF to write to this (next) page
     map[lpn] = WFE;
-    if(hcID.is_hot(lpn))
+    if(hcID->is_hot(lpn))
     {
         hotValidPages[WFE.package][WFE.die][WFE.plane][WFE.block]++;
     }
@@ -319,7 +319,7 @@ void FtlImpl_DWF::check_hot_pages(Address block, Block *blockPtr, const uint hot
     for(uint p = 0; p < BLOCK_SIZE; p++){
         block.page = p;
         const Page *page = blockPtr->get_page_pointer(block);
-        if(page->get_state() == VALID and hcID.is_hot(page->get_logical_address()))
+        if(page->get_state() == VALID and hcID->is_hot(page->get_logical_address()))
         {
             hotVictimPages++;
         }

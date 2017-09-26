@@ -19,24 +19,12 @@
 
 /* Implements a static hot/cold identification technique. */
 
-#include <new>
-#include <assert.h>
-#include <stdio.h>
-#include <math.h>
-#include <set>
+//#include <new>
+//#include <assert.h>
+//#include <stdio.h>
+//#include <math.h>
+//#include <set>
 #include "../ssd.h"
-
-//using LPNCount = std::map<LPN,int>;
-typedef std::map<ulong,int> LPNCount;
-//using LPNCountIter = std::iterator<std::map<LPN,int> >;
-typedef std::map<ulong,int>::iterator LPNCountIter;
-typedef std::set<ulong> HotLPNs;
-
-struct LPNNum{
-    ulong lpn;
-    unsigned int num;
-    LPNNum(const ulong &l, const unsigned int numberOfAppearances) : lpn(l), num(numberOfAppearances){}
-};
 
 using namespace ssd;
 
@@ -50,24 +38,11 @@ Static_HCID::Static_HCID(ulong maxLPN, double hotFraction)
 }
 
 
-Static_HCID::~Static_HCID(){}
-
-void Static_HCID::advance_frame(){
-    ///@TODO Implement
+Static_HCID::~Static_HCID()
+{
 }
 
-bool Static_HCID::is_hot(ulong lpn, ulong requestNr)
+bool Static_HCID::is_hot(ulong lpn) const
 {
-    return lpn < std::floor(hotFraction*maxLPN);
+    return lpn < numHotLPN;
 }
-/*
-ulong Static_HCID::get_num_hot()
-{
-    ///@TODO This is not trim-proof
-    return numHotLPN;
-}
-
-double  Static_HCID::get_hot_fraction()
-{
-    return hotFraction;
-}*/

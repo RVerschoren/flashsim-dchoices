@@ -351,42 +351,39 @@ public:
 /**
  * @brief Class that can determine whether a specific LPN is deemed as hot or cold.
  */
-class HotColdID{
+class HotColdID
+{
 public:
     HotColdID() = default;
     virtual ~HotColdID() = default;
-    virtual bool is_hot(ulong lpn, ulong requestNr = 0) = 0;
-    //virtual ulong get_num_hot() = 0;
-    //virtual double get_hot_fraction() = 0;
+    virtual bool is_hot(const ulong lpn) const = 0;
+    virtual bool next_request() = 0;
 };
 
-class Oracle_HCID : public HotColdID{
+class Oracle_HCID : public HotColdID
+{
 public:
     Oracle_HCID(std::vector<Event> &events, std::vector<bool> &requestIsHot);
     virtual ~Oracle_HCID();
-    void advance_frame();
-    bool is_hot(ulong lpn, ulong requestNr = 0);
-    //ulong get_num_hot();
-    //double get_hot_fraction();
+    bool is_hot(const ulong lpn) const;
+    bool next_request();
 private:
-    uint currentFrame;
-    uint nrFrames;
-    ulong numHotLPN;
-    std::vector<bool> hotMap;
+    uint currentRequest;
+    uint numRequests;
+    std::vector<bool> requestHotness;
 };
 
-class Static_HCID : public HotColdID{
+class Static_HCID : public HotColdID
+{
 public:
-    Static_HCID(ulong maxLPN, double hotFraction);
+    Static_HCID(ulong maxLPN, double hotFraction = HOT_FRACTION);
     virtual ~Static_HCID();
-    void advance_frame();
-    bool is_hot(ulong lpn, ulong requestNr = 0);
-    //ulong get_num_hot();
-    //double  get_hot_fraction();
+    bool is_hot(const ulong lpn) const;
+    bool next_request();
 private:
     ulong maxLPN;
-    ulong numHotLPN;
     double hotFraction;
+    ulong numHotLPN;
     std::map<ulong, bool> hotMap;
 };
 
@@ -542,7 +539,7 @@ private:
 };
 
 std::vector<Event> read_event_from_trace(std::string fileName, std::function<Event (std::string)> readLine);
-std::vector<bool> read_oracle(const std::string filename);
+std::vector<bool> read_oracle(std::string filename);
 Event read_event_simple(std::string line);
 Event read_event_BIOtracer(std::string line);
 
@@ -821,7 +818,6 @@ class Garbage_collector
 public:
     Garbage_collector(FtlParent *FTL);
     virtual ~Garbage_collector(void);
-    //enum status collect(Event &event);
     virtual void collect(Address &addr);
 protected:
     FtlParent *ftl;
@@ -948,7 +944,9 @@ private:
     bool out_of_blocks;
 };
 
-
+/* Ftl class has some completed functions that get info from lower-level
+ * hardware.  The other functions are in place as suggestions and can
+ * be changed as you wish. */
 class FtlParent
 {
 public:
@@ -1189,8 +1187,8 @@ private:
 class FtlImpl_DWF : public FtlParent
 {
 public:
-    FtlImpl_DWF(Controller &controller);
-    FtlImpl_DWF(Controller &controller, const std::vector<Event> &events);
+    FtlImpl_DWF(Controller &controller, HotColdID *hcID);
+    //FtlImpl_DWF(Controller &controller, const std::vector<Event> &events);
     ~FtlImpl_DWF();
     void initialize();
     void initialize(const std::vector<Event> &events);
@@ -1212,7 +1210,8 @@ private:
     Block *WFEPtr; // Internal WF
     Address WFE;
     std::map<ulong, Address> map;
-    Static_HCID hcID;
+    //Static_HCID hcID;
+    HotColdID *hcID;
     std::vector< std::vector< std::vector< std::vector<uint> > > > hotValidPages;
 };
 
@@ -1243,41 +1242,6 @@ private:
     std::vector< std::vector< std::vector< std::vector<bool> > > > blockIsHot;
 };
 
-
-/* Ftl class has some completed functions that get info from lower-level
- * hardware.  The other functions are in place as suggestions and can
- * be changed as you wish. */
-/*class Ftl
-{
-public:
-    Ftl(Controller &controller);
-    virtual ~Ftl(void);
-    virtual void initialize();
-    virtual enum status read(Event &event);
-    virtual enum status write(Event &event);
-    friend Garbage_collector;
-    friend GCImpl_Random;
-    friend GCImpl_DChoices;
-    friend GCImpl_Greedy;
-protected:
-    Page* get_page(const Address &addr) const;
-    Block* get_block(const Address &addr) const;
-    Plane* get_plane(const Address &addr) const;
-    enum status erase(Event &event);
-    enum status merge(Event &event);
-    void garbage_collect(Event &event);
-    ulong get_erases_remaining(const Address &address) const;
-    void get_least_worn(Address &address) const;
-    enum page_state get_state(const Address &address) const;
-    Controller &controller;
-    Garbage_collector *garbage;
-    Wear_leveler wear;
-    Address *free_list;
-    Address *valid_list;
-    Address *invalid_list;
-    long *map;
-};*/
-
 /* This is a basic implementation that only provides delay updates to events
  * based on a delay value multiplied by the size (number of pages) needed to
  * be written. */
@@ -1304,7 +1268,7 @@ private:
 class Controller
 {
 public:
-    Controller(Ssd &parent);
+    Controller(Ssd &parent, HotColdID *hcID);
     ~Controller(void);
     void initialize();
     enum status event_arrive(Event &event);
@@ -1354,7 +1318,7 @@ private:
 class Ssd
 {
 public:
-    Ssd (uint ssd_size = SSD_SIZE);
+    Ssd (uint ssd_size = SSD_SIZE, HotColdID *hcID = nullptr);
     ~Ssd(void);
     double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time);
     double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time, void *buffer);

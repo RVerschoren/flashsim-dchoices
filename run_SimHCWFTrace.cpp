@@ -12,14 +12,14 @@ int main(int argc, char *argv[])
 {
     load_config();
     /// Override with command line settings
-    BLOCK_SIZE = std::atoi(argv[1]);
-    DCHOICES_D = std::atoi(argv[2]);
-    SPARE_FACTOR = std::atof(argv[3]);
-    HOT_FRACTION = std::atof(argv[4]);//f
-    const uint startrun = std::atoi(argv[5]); //startrun
-    const uint nruns = std::atoi(argv[6]); //Number of runs
-    const ulong maxPE = std::atoi(argv[7]); // Maximum number of PE cycles
-    const ulong numRequests = std::atol(argv[8]);
+    BLOCK_SIZE = std::stoi(argv[1]);
+    DCHOICES_D = std::stoi(argv[2]);
+    SPARE_FACTOR = std::stod(argv[3]);
+    HOT_FRACTION = std::stod(argv[4]);//f
+    const uint startrun = std::stoi(argv[5]); //startrun
+    const uint nruns = std::stoi(argv[6]); //Number of runs
+    const ulong maxPE = std::stoul(argv[7]); // Maximum number of PE cycles
+    const ulong numRequests = std::stoul(argv[8]);
     const std::string traceFile(argv[9]);
     const std::string traceID = traceFile.substr(0,4);
 
@@ -40,10 +40,11 @@ int main(int argc, char *argv[])
     uint nrFrames = 1;
     BLOCK_ERASES = 10000000;
 
-    // DWF
-    FTL_IMPLEMENTATION = 6;
+    // HCWF
+    FTL_IMPLEMENTATION = 7;
     // DChoices
     GC_ALGORITHM = 3;
+
 
     std::vector<Event> events = read_event_from_trace(traceFile, readEvtFunc);
     //Example oracle filename
@@ -52,7 +53,7 @@ int main(int argc, char *argv[])
     //Example format filename : 'dwf-b',I2,'-d',I3,'-rho',F4.2,'-r',F5.3,'-f',F5.3,'-WA.',I2,'.csv';
     std::stringstream sstr;
     sstr << std::fixed;//Print trailing zeroes
-    sstr << "dwf";
+    sstr << "hcwf";
     sstr << "-b" << std::setw(2) << BLOCK_SIZE;
     sstr << "-d" << std::setw(3) << DCHOICES_D;
     sstr << "-sf" << std::setw(4) << std::setprecision(2) << SPARE_FACTOR;

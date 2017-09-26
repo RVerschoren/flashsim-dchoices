@@ -22,3 +22,38 @@
  */
 
 #include "../util.h"
+#include <fstream>
+#include <iostream>
+#include <iomanip>
+
+
+std::string space_to_zero(std::string text) {
+    for(std::string::iterator it = text.begin(); it != text.end(); ++it) {
+        if(*it == ' ') {
+            *it = '0';
+        }
+    }
+    return text;
+}
+
+std::string print_fract(const double d, const unsigned int width)
+{
+    //Fractional part as string
+    const int fraction = std::pow(10, width)*(d - std::floor(d));
+    std::stringstream ss;
+     ss << std::setw(width) << fraction;
+    return space_to_zero(ss.str());
+}
+
+std::string num2str(const unsigned int num)
+{
+    std::stringstream ss;
+     ss << num;
+    return ss.str();
+}
+
+std::string create_oracle_filename(const std::string traceID, const double f, const unsigned int nrFrames)
+{
+    return (traceID + "-" + print_fract(f) + "-" + num2str(nrFrames) + "-oracle.csv");
+
+}

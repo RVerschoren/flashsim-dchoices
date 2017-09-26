@@ -1,4 +1,4 @@
-CXX=g++-4.9
+CXX=g++
 #CXXFLAGS=-Wall -c -std=c++11  -g -pg -DUSE_BLOCKMGR -DCHECK_VALID_PAGE -DCHECK_HOT_VALID_PAGES
 #CXXFLAGS=-Wall -c -std=c++11 -g -pg -O2 -DUSE_BLOCKMGR
 #LDFLAGS= -pg
@@ -12,7 +12,7 @@ SOURCES_SSDLIB = $(filter-out ssd_ftl.cpp, $(wildcard ssd_*.cpp))  \
                  $(wildcard util/*.cpp)                            \
                  SSDSim.cpp
 OBJECTS_SSDLIB=$(patsubst %.cpp,%.o,$(SOURCES_SSDLIB))
-SOURCES_RUNS = $(wildcard run_Sim*.cpp)
+SOURCES_RUNS = $(wildcard run_Sim*.cpp) run_ComputeOracle.cpp
 PROGRAMS = $(patsubst run_%.cpp,%,$(SOURCES_RUNS))
 
 

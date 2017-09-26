@@ -41,9 +41,9 @@ using namespace ssd;
 /* use caution when editing the initialization list - initialization actually
  * occurs in the order of declaration in the class definition and not in the
  * order listed here */
-Ssd::Ssd(uint ssd_size):
+Ssd::Ssd(uint ssd_size, HotColdID *hcID):
     size(ssd_size),
-    controller(*this),
+    controller(*this, hcID),
     ram(RAM_READ_DELAY, RAM_WRITE_DELAY),
     bus(size, BUS_CTRL_DELAY, BUS_DATA_DELAY, BUS_TABLE_SIZE, BUS_MAX_CONNECT),
 

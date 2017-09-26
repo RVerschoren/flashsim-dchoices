@@ -24,39 +24,26 @@
 #include <stdio.h>
 #include <math.h>
 #include "../ssd.h"
-//#include "../util.h"
 
 #include <iostream>
 
 using namespace ssd;
 
 Oracle_HCID::Oracle_HCID(std::vector<Event> &events, std::vector<bool> &requestIsHot)
-    : hotMap(requestIsHot.size())
+    : currentRequest(0), numRequests(events.size()), requestHotness(requestIsHot)
 {
-    for(bool b : requestIsHot)
-    {
-        hotMap.push_back(b);
-    }
 }
 
 Oracle_HCID::~Oracle_HCID()
-{}
-
-void Oracle_HCID::advance_frame()
 {
-
 }
 
-bool Oracle_HCID::is_hot(ulong lpn, ulong requestNr){
-    return hotMap[requestNr];
-}
-/*
-ulong Oracle_HCID::get_num_hot()
+bool Oracle_HCID::is_hot(const ulong lpn) const
 {
-
+    return requestHotness[currentRequest];
 }
 
-double Oracle_HCID::get_hot_fraction()
+bool Oracle_HCID::next_request()
 {
-
-}*/
+    currentRequest = (currentRequest + 1) % numRequests;
+}

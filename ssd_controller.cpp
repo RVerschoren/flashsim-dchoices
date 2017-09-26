@@ -39,7 +39,7 @@
 using namespace ssd;
 
 
-Controller::Controller(Ssd &parent):
+Controller::Controller(Ssd &parent, HotColdID *hcID):
     ssd(parent)
     //,ftl(*this)
 {
@@ -65,9 +65,11 @@ Controller::Controller(Ssd &parent):
         ftl = new FtlImpl_SWF(*this);
         break;
     case 6:
-        ftl = new FtlImpl_DWF(*this);
+        assert(hcID != nullptr);
+        ftl = new FtlImpl_DWF(*this, hcID);
         break;
     case 7:
+        assert(hcID != nullptr);
         ftl = new FtlImpl_HCWF(*this);
         break;
     ///@TODO: Implement and enable remaining FTLs

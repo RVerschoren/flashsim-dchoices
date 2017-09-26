@@ -25,7 +25,8 @@
 
 #include <random>
 #include <ctime>
-#include<functional>
+#include <string>
+#include <sstream>
 
 #ifndef _SSD_UTIL_H
 #define _SSD_UTIL_H
@@ -76,5 +77,9 @@ private:
 
 };
 
+std::string space_to_zero(std::string text);
+std::string print_fract(const double d, const unsigned int width = 3);
+std::string num2str(const unsigned int num);
+std::string create_oracle_filename(const std::string traceID, const double hotFraction, const unsigned int nrFrames);
 
 #endif

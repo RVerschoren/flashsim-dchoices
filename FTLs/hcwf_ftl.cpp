@@ -335,5 +335,3 @@ void FtlImpl_HCWF::check_ftl_hotness_integrity()
         assert(blockIsHot[addr.package][addr.die][addr.plane][addr.block] == hcID.is_hot(lpn));
     }
 }
-
-

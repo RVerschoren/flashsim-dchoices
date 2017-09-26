@@ -269,7 +269,7 @@ ioreq_event &Event::operator= (const ioreq_event &rhs)
 }
 #endif
 
-std::vector<bool> read_oracle(const std::string &filename)
+std::vector<bool> ssd::read_oracle(std::string filename)
 {
     std::ifstream data(filename);
     std::vector<bool> oracle;
@@ -279,7 +279,7 @@ std::vector<bool> read_oracle(const std::string &filename)
         std::stringstream  lineStream(line);
         std::string        cell;
         std::getline(lineStream,cell,',');
-        const bool value = std::stoi(cell); // Implicit conversion from 0 to false and 1 to true
+        const bool value = std::stoi(cell) != 0;
         oracle.push_back(value);
     }
     return oracle;
@@ -310,7 +310,7 @@ Event ssd::read_event_simple(std::string line)
     return Event(type, startAddress, 1, 0);
 }
 
-Event read_event_BIOtracer(std::string line)
+Event ssd::read_event_BIOtracer(std::string line)
 {
     const char delim = '\t';
     std::stringstream  lineStream(line);

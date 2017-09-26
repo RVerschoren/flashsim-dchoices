@@ -42,9 +42,9 @@ int main(int argc, char *argv[])
     // DChoices
     GC_ALGORITHM = 3;
 
-    const ulong maxLPN = std::floor((1.0-SPARE_FACTOR)*BLOCK_SIZE*PLANE_SIZE*DIE_SIZE*PACKAGE_SIZE*SSD_SIZE);
-    const ulong maxHotLPN = std::floor(HOT_FRACTION*maxLPN);
-    const ulong maxColdLPN = maxLPN-maxHotLPN;
+    const ulong numLPN = std::floor((1.0-SPARE_FACTOR)*BLOCK_SIZE*PLANE_SIZE*DIE_SIZE*PACKAGE_SIZE*SSD_SIZE);
+    const ulong maxHotLPN = std::floor(HOT_FRACTION*numLPN);
+    const ulong maxColdLPN = numLPN-maxHotLPN;
 
     //Example format filename : 'dwf-b',I2,'-d',I3,'-rho',F4.2,'-r',F5.3,'-f',F5.3,'-WA.',I2,'.csv';
     std::stringstream sstr;
@@ -56,10 +56,13 @@ int main(int argc, char *argv[])
     sstr << "-r" << std::setw(5) << std::setprecision(3) << HOT_REQUEST_RATIO;
     sstr << "-f" << std::setw(5) << std::setprecision(3) << HOT_FRACTION;
     std::string fileName = sstr.str();
+
     for(uint run = startrun; run < (startrun+nruns); run ++ )
     {
         RandNrGen::getInstance().reset();
-        Ssd ssd;
+        HotColdID *hcID = new Static_HCID(numLPN,HOT_FRACTION);
+
+        Ssd ssd(SSD_SIZE, hcID);
 
         const Controller &ctrl = ssd.get_controller();
         uint i = 0;
@@ -71,6 +74,7 @@ int main(int argc, char *argv[])
             ssd.event_arrive(WRITE, lpn, 1, (double) 1+(2500*i++));//Timings don't really matter for PE fairness/SSD endurance
         }
         ssd.write_statistics_csv(fileName, run);
+        delete hcID;
     }
     return 0;
 }

@@ -357,7 +357,7 @@ public:
     HotColdID() = default;
     virtual ~HotColdID() = default;
     virtual bool is_hot(const ulong lpn) const = 0;
-    virtual bool next_request() = 0;
+    virtual void next_request() = 0;
 };
 
 class Oracle_HCID : public HotColdID
@@ -366,7 +366,7 @@ public:
     Oracle_HCID(std::vector<Event> &events, std::vector<bool> &requestIsHot);
     virtual ~Oracle_HCID();
     bool is_hot(const ulong lpn) const;
-    bool next_request();
+    void next_request();
 private:
     uint currentRequest;
     uint numRequests;
@@ -379,7 +379,7 @@ public:
     Static_HCID(ulong maxLPN, double hotFraction = HOT_FRACTION);
     virtual ~Static_HCID();
     bool is_hot(const ulong lpn) const;
-    bool next_request();
+    void next_request();
 private:
     ulong maxLPN;
     double hotFraction;
@@ -839,6 +839,7 @@ public:
     void collect(Address &addr);
 private:
     uint d;
+    ulong FIFOCounter;
     std::vector<ulong> choices;
 };
 

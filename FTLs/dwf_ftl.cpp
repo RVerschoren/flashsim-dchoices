@@ -177,7 +177,7 @@ enum status FtlImpl_DWF::write(Event &event)
         assert(k <= BLOCK_SIZE);
 
         controller.stats.numGCRead += j;
-        controller.stats.numGCErase++;
+        controller.stats.numGCErase += 1;
         controller.stats.victimValidDist[j] = controller.stats.victimValidDist[j] + 1;
 
         if(j <= k) // Sufficient space to copy everything to WFI

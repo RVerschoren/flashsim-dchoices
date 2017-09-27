@@ -234,8 +234,8 @@ void next_GC_invocation(const uint validPages, const uint hotValidPages, const b
 void Stats::next_currentPE(const HotColdID *hcID)
 {
     currentPE--;
-    PEfairness.push_back(numGCErase / (double)(PLANE_SIZE*currentPE));
-    SSDendurance.push_back(numFTLWrite/ (double)(PLANE_SIZE*BLOCK_SIZE));
+    PEfairness.push_back((double) numGCErase / (double)(PLANE_SIZE*(BLOCK_ERASES - currentPE)));
+    SSDendurance.push_back((double) numFTLWrite/ (double)(PLANE_SIZE*BLOCK_SIZE));
     //if(hcID != nullptr)
     //{
     //    hotValidPages.push_back(hcID->get_num_hot_pages());

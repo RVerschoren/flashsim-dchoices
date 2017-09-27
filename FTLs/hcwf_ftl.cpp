@@ -167,7 +167,7 @@ enum status FtlImpl_HCWF::write(Event &event)
         //assert(k <= BLOCK_SIZE);
 
         controller.stats.numGCRead += j;
-        controller.stats.numGCErase++;
+        controller.stats.numGCErase += 1;
         controller.stats.victimValidDist[j] = controller.stats.victimValidDist[j] + 1;
         //std::cout << "\t moving " << j << " pages"<<std::endl;
         if(HWFInitiated)

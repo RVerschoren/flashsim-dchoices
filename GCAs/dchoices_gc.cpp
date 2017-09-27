@@ -26,7 +26,7 @@
 using namespace ssd;
 
 GCImpl_DChoices::GCImpl_DChoices(FtlParent *ftl, const uint d):
-    Garbage_collector(ftl),  d(d)
+    Garbage_collector(ftl),  d(d), FIFOCounter(0)
 {
 }
 
@@ -36,22 +36,31 @@ GCImpl_DChoices::~GCImpl_DChoices()
 
 void GCImpl_DChoices::collect(Address &victimAddress)
 {
-    Address address(victimAddress);
-    assert(address.check_valid() >= PLANE);
-    address.valid = BLOCK;//Make sure this is the case
 
-    uint minValidPages = BLOCK_SIZE + 1;
-    for(uint i = 0; i < d; i++){
-        address.package = RandNrGen::getInstance().get(SSD_SIZE);
-        address.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
-        address.plane = RandNrGen::getInstance().get(DIE_SIZE);
-        address.block = RandNrGen::getInstance().get(PLANE_SIZE);
-        assert(address.check_valid() >= BLOCK);
 
-        const uint validPages = ftl->get_pages_valid(address);
-        if(minValidPages > validPages){
-            minValidPages = validPages;
-            victimAddress = address;
+    if(d == 0) ///@TODO Remove FIFO hack
+    {
+        FIFOCounter = (FIFOCounter + 1) % PLANE_SIZE;
+        victimAddress.block = FIFOCounter;
+    }else{
+        Address address(victimAddress);
+        assert(address.check_valid() >= PLANE);
+        address.valid = BLOCK;//Make sure this is the case
+
+        uint minValidPages = BLOCK_SIZE + 1;
+        for(uint i = 0; i < d; i++)
+        {
+            address.package = RandNrGen::getInstance().get(SSD_SIZE);
+            address.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
+            address.plane = RandNrGen::getInstance().get(DIE_SIZE);
+            address.block = RandNrGen::getInstance().get(PLANE_SIZE);
+            assert(address.check_valid() >= BLOCK);
+
+            const uint validPages = ftl->get_pages_valid(address);
+            if(minValidPages > validPages){
+                minValidPages = validPages;
+                victimAddress = address;
+            }
         }
     }
     victimAddress.valid = PAGE;

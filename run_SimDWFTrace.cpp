@@ -18,7 +18,8 @@ int main(int argc, char *argv[])
     HOT_FRACTION = std::atof(argv[4]);//f
     const uint startrun = std::atoi(argv[5]); //startrun
     const uint nruns = std::atoi(argv[6]); //Number of runs
-    const ulong maxPE = std::atoi(argv[7]); // Maximum number of PE cycles
+    BLOCK_ERASES = 10000000;
+    const ulong maxPE = BLOCK_ERASES - std::atoi(argv[7]); // Maximum number of PE cycles, counting back
     const ulong numRequests = std::atol(argv[8]);
     const std::string traceFile(argv[9]);
     const std::string traceID = traceFile.substr(0,4);
@@ -38,7 +39,6 @@ int main(int argc, char *argv[])
     }
 
     uint nrFrames = 1;
-    BLOCK_ERASES = 10000000;
 
     // DWF
     FTL_IMPLEMENTATION = 6;
@@ -46,6 +46,9 @@ int main(int argc, char *argv[])
     GC_ALGORITHM = 3;
 
     std::vector<Event> events = read_event_from_trace(traceFile, readEvtFunc);
+    const ulong numUniqueLPNs = count_unique_lpns(events);
+
+    PLANE_SIZE = std::ceil( (double) numUniqueLPNs / (double) (BLOCK_SIZE * (1.0-SPARE_FACTOR)) );
     //Example oracle filename
     std::vector<bool> oracle = read_oracle( create_oracle_filename(traceID, HOT_FRACTION, nrFrames) );
 

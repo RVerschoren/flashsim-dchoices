@@ -36,8 +36,6 @@ GCImpl_DChoices::~GCImpl_DChoices()
 
 void GCImpl_DChoices::collect(Address &victimAddress)
 {
-
-
     if(d == 0) ///@TODO Remove FIFO hack
     {
         FIFOCounter = (FIFOCounter + 1) % PLANE_SIZE;

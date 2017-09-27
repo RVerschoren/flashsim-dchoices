@@ -538,6 +538,7 @@ private:
     bool noop;
 };
 
+ulong count_unique_lpns(const std::vector<Event> &events);
 std::vector<Event> read_event_from_trace(std::string fileName, std::function<Event (std::string)> readLine);
 std::vector<bool> read_oracle(std::string filename);
 Event read_event_simple(std::string line);

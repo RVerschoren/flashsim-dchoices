@@ -31,6 +31,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include<set>
 
 using namespace ssd;
 
@@ -336,3 +337,16 @@ Event ssd::read_event_BIOtracer(std::string line)
     return Event(type, startAddress, numSectors, startTime);
 }
 
+ulong ssd::count_unique_lpns(const std::vector<Event> &events)
+{
+    std::set<ulong> uniqueLPNs;
+    for(const Event &evt : events)
+    {
+        const ulong &lpn = evt.get_logical_address();
+        if(uniqueLPNs.find(lpn) == uniqueLPNs.end()) // Not found in set
+        {
+            uniqueLPNs.insert(lpn);
+        }
+    }
+    return uniqueLPNs.size();
+}

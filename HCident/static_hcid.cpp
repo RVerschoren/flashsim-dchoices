@@ -46,3 +46,7 @@ bool Static_HCID::is_hot(ulong lpn) const
 {
     return lpn < numHotLPN;
 }
+
+void Static_HCID::next_request()
+{
+}

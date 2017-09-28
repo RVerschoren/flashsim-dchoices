@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     //Example format filename : 'dwf-b',I2,'-d',I3,'-rho',F4.2,'-r',F5.3,'-f',F5.3,'-WA.',I2,'.csv';
     std::stringstream sstr;
     sstr << std::fixed;//Print trailing zeroes
-    sstr << "dwf";
+    sstr << "dwftrace";
     sstr << "-b" << std::setw(2) << BLOCK_SIZE;
     sstr << "-d" << std::setw(3) << DCHOICES_D;
     sstr << "-sf" << std::setw(4) << std::setprecision(2) << SPARE_FACTOR;

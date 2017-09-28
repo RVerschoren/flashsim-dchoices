@@ -62,7 +62,13 @@ FtlParent::~FtlParent()
     }
 }
 
-void FtlParent::initialize()
+void FtlParent::initialize(const ulong numUniqueLPN)
+{
+    assert(false);
+    return;
+}
+
+void FtlParent::initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness)
 {
     assert(false);
     return;

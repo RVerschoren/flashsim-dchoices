@@ -956,7 +956,8 @@ public:
 
     virtual ~FtlParent ();
 
-    virtual void initialize();
+    virtual void initialize(const ulong numUniqueLPN);
+    virtual void initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness);
 
     virtual enum status read(Event &event) = 0;
     virtual enum status write(Event &event) = 0;
@@ -1175,7 +1176,7 @@ class FtlImpl_SWF : public FtlParent // Simulates the working of a page-mapped F
 public:
     FtlImpl_SWF(Controller &controller);
     ~FtlImpl_SWF();
-    void initialize();
+    void initialize(const ulong numUniqueLPN);
     enum status read(Event &event);
     enum status write(Event &event);
     enum status trim(Event &event);
@@ -1192,8 +1193,8 @@ public:
     FtlImpl_DWF(Controller &controller, HotColdID *hcID);
     //FtlImpl_DWF(Controller &controller, const std::vector<Event> &events);
     ~FtlImpl_DWF();
-    void initialize();
-    void initialize(const std::vector<Event> &events);
+    void initialize(const ulong numUniqueLPN);
+    void initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness);
     enum status read(Event &event);
     enum status write(Event &event);
     enum status trim(Event &event);
@@ -1206,7 +1207,6 @@ private:
     void check_valid_pages(const ulong numLPN);
     void check_hot_pages(Address block, Block *blockPtr, const uint hotPages);
 
-    ulong numLPN; // Number of unique LPNs in the map
     Block *WFIPtr; // External WF
     Address WFI;
     Block *WFEPtr; // Internal WF
@@ -1220,9 +1220,10 @@ private:
 class FtlImpl_HCWF : public FtlParent
 {
 public:
-    FtlImpl_HCWF(Controller &controller);
+    FtlImpl_HCWF(Controller &controller, HotColdID *hcID);
     ~FtlImpl_HCWF();
-    void initialize();
+    virtual void initialize(const ulong numUniqueLPN);
+    void initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness);
     enum status read(Event &event);
     enum status write(Event &event);
     enum status trim(Event &event);
@@ -1232,7 +1233,6 @@ private:
     void check_block_hotness();
     void check_ftl_hotness_integrity();
 
-    ulong numLPN;
     uint numHotBlocks;
     uint maxHotBlocks;
     Block *CWFPtr; // Cold WF
@@ -1240,7 +1240,7 @@ private:
     Block *HWFPtr; // Hot WF
     Address HWF;
     std::map<ulong, Address> map;
-    Static_HCID hcID;
+    HotColdID *hcID;
     std::vector< std::vector< std::vector< std::vector<bool> > > > blockIsHot;
 };
 
@@ -1272,7 +1272,8 @@ class Controller
 public:
     Controller(Ssd &parent, HotColdID *hcID);
     ~Controller(void);
-    void initialize();
+    void initialize(const ulong numLPN);
+    void initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness);
     enum status event_arrive(Event &event);
     friend class FtlParent;
     friend class FtlImpl_Page;
@@ -1322,6 +1323,8 @@ class Ssd
 public:
     Ssd (uint ssd_size = SSD_SIZE, HotColdID *hcID = nullptr);
     ~Ssd(void);
+    void initialize(const ulong numUniqueLPNs);
+    void initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness);
     double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time);
     double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time, void *buffer);
     friend class Controller;

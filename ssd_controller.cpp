@@ -70,7 +70,7 @@ Controller::Controller(Ssd &parent, HotColdID *hcID):
         break;
     case 7:
         assert(hcID != nullptr);
-        ftl = new FtlImpl_HCWF(*this);
+        ftl = new FtlImpl_HCWF(*this, hcID);
         break;
     ///@TODO: Implement and enable remaining FTLs
     }
@@ -87,9 +87,16 @@ Controller::~Controller(void)
     return;
 }
 
-void Controller::initialize()
+void Controller::initialize(const ulong numLPN)
 {
-    ftl->initialize();
+    ftl->initialize(numLPN);
+    return;
+}
+
+///@TODO Reduce to 1 argument by assigning hotness to Event itself
+void Controller::initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness)
+{
+    ftl->initialize(events, eventHotness);
     return;
 }
 

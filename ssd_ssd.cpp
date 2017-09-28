@@ -114,10 +114,19 @@ Ssd::Ssd(uint ssd_size, HotColdID *hcID):
     assert(VIRTUAL_BLOCK_SIZE > 0);
     assert(VIRTUAL_PAGE_SIZE > 0);
 
-    controller.initialize();
-
     return;
 }
+
+void Ssd::initialize(const ulong numUniqueLPNs)
+{
+    controller.initialize(numUniqueLPNs);
+}
+
+void Ssd::initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness)
+{
+    controller.initialize(events, eventHotness);
+}
+
 
 Ssd::~Ssd(void)
 {

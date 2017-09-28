@@ -30,13 +30,13 @@
 
 using namespace ssd;
 
-void FtlImpl_SWF::initialize()
+void FtlImpl_SWF::initialize(const ulong numLPN)
 {
     // Just assume for now that we have PAGE validity, we'll check it later anyway
     Address addr(0,0,0,0,0,PAGE);
     WF = addr;
     WFPtr = controller.get_block_pointer(WF);
-    for(unsigned int lpn = 0; lpn < map.size(); lpn++){
+    for(unsigned int lpn = 0; lpn < numLPN; lpn++){
 
         bool success = false;
         while(not success){

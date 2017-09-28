@@ -63,6 +63,7 @@ int main(int argc, char *argv[])
         HotColdID *hcID = new Static_HCID(numLPN, HOT_FRACTION);
 
         Ssd ssd(SSD_SIZE, hcID);
+        ssd.initialize(numLPN);
 
         const Controller &ctrl = ssd.get_controller();
         uint i = 0;

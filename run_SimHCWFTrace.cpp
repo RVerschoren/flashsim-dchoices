@@ -70,6 +70,7 @@ int main(int argc, char *argv[])
         HotColdID *hcID = new Oracle_HCID(events, oracle);
 
         Ssd ssd(SSD_SIZE, hcID);
+        ssd.initialize(events, oracle);
 
         const Controller &ctrl = ssd.get_controller();
         uint it = 0;

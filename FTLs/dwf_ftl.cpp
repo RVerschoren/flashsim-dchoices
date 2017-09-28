@@ -28,7 +28,7 @@
 
 using namespace ssd;
 
-void FtlImpl_DWF::initialize()
+void FtlImpl_DWF::initialize(const ulong numLPN)
 {
     // Just assume for now that we have PAGE validity, we'll check it later anyway
     Address addr(0,0,0,0,0,PAGE);
@@ -67,7 +67,7 @@ void FtlImpl_DWF::initialize()
     }
 }
 
-/*void FtlImpl_DWF::initialize(const std::vector<Event> &events)
+void FtlImpl_DWF::initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness)
 {
     // Just assume for now that we have PAGE validity, we'll check it later anyway
     Address addr(0,0,0,0,0,PAGE);
@@ -79,8 +79,9 @@ void FtlImpl_DWF::initialize()
     //const uint maxHotBlocks = std::ceil(HOT_FRACTION*PLANE_SIZE) + 1;
     //const uint numColdBlocks = PLANE_SIZE - maxHotBlocks;
 
-    for(unsigned int lpn = 0; lpn < map.size(); lpn++)
+    for(unsigned int it = 0; it < events.size(); it++)
     {
+        const ulong lpn = events[it].get_logical_address();
         bool success = false;
         //const bool lpnIsHot = hcID.is_hot(lpn);
         while(not success)
@@ -99,7 +100,7 @@ void FtlImpl_DWF::initialize()
                 evt.set_address(addr);
                 block->write(evt);
                 map[lpn] = addr;
-                if(hcID.is_hot(lpn))
+                if(eventHotness[it])
                 {
                     hotValidPages[addr.package][addr.die][addr.plane][addr.block]++;
                 }
@@ -107,11 +108,11 @@ void FtlImpl_DWF::initialize()
             }
         }
     }
-}*/
+}
 
 
 FtlImpl_DWF::FtlImpl_DWF(Controller &controller, HotColdID *hcID):
-    FtlParent(controller), numLPN((1.0-SPARE_FACTOR)*BLOCK_SIZE*PLANE_SIZE*DIE_SIZE*PACKAGE_SIZE), map(),
+    FtlParent(controller), map(),
     hcID(hcID), hotValidPages(SSD_SIZE,  std::vector<std::vector<std::vector<uint> > >(PACKAGE_SIZE, std::vector<std::vector<uint> >(DIE_SIZE, std::vector<uint>(PLANE_SIZE,0))))
 {
     return;
@@ -128,7 +129,7 @@ enum status FtlImpl_DWF::read(Event &event)
 {
     controller.stats.numFTLRead++;
     const uint lpn = event.get_logical_address();
-    event.set_address(map[lpn]);
+    if(map.find(lpn) != map.end()) event.set_address(map[lpn]);
 
     return SUCCESS;
 }
@@ -154,17 +155,17 @@ enum status FtlImpl_DWF::write(Event &event)
     const ulong lpn = event.get_logical_address();
 
     ///Invalidate previous page
-    get_block_pointer(map[lpn])->invalidate_page(map[lpn].page);
+    if(map.find(lpn) != map.end()) get_block_pointer(map[lpn])->invalidate_page(map[lpn].page);
     if(hcID->is_hot(lpn))
     {
-        hotValidPages[map[lpn].package][map[lpn].die][map[lpn].plane][map[lpn].block]--;
+        if(map.find(lpn) != map.end()) hotValidPages[map[lpn].package][map[lpn].die][map[lpn].plane][map[lpn].block]--;
     }
 
     while(WFEPtr->get_next_page(WFE) != SUCCESS)//Still space in WFE
     {
         /// Need to select a victim block through GC
         // Temporary address until we find a suitable real victim
-        Address  victim = map[lpn];
+        Address  victim = (map.find(lpn) != map.end())?  map[lpn] : WFE;
         Block *victimPtr;
         do {
             garbage->collect(victim);
@@ -261,7 +262,8 @@ enum status FtlImpl_DWF::trim(Event &event)
 
 void FtlImpl_DWF::check_ftl_integrity(const ulong lpn)
 {
-    for(uint l = 0; l < numLPN; l++){
+    for(std::pair<ulong,Address> pair : map){
+        const ulong l = pair.first;
         if(l != lpn)
         {
             Address addr = map[l];

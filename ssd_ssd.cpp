@@ -122,9 +122,9 @@ void Ssd::initialize(const ulong numUniqueLPNs)
     controller.initialize(numUniqueLPNs);
 }
 
-void Ssd::initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness)
+void Ssd::initialize(const std::vector<Event> &events)
 {
-    controller.initialize(events, eventHotness);
+    controller.initialize(events);
 }
 
 

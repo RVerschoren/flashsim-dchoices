@@ -104,7 +104,7 @@ void FtlImpl_HCWF::initialize(const ulong numLPN)
 }
 
 
-void FtlImpl_HCWF::initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness)
+void FtlImpl_HCWF::initialize(const std::vector<Event> &events)
 {
     // Just assume for now that we have PAGE validity, we'll check it later anyway
     Address addr(0,0,0,0,0,PAGE);
@@ -140,7 +140,7 @@ void FtlImpl_HCWF::initialize(const std::vector<Event> &events, const std::vecto
     {
         const ulong lpn = events[it].get_logical_address();
         bool success = false;
-        const bool lpnIsHot = eventHotness[it];
+        const bool lpnIsHot = events[it].is_hot();
         while(not success)
         {
             addr.package = RandNrGen::getInstance().get(SSD_SIZE);
@@ -401,6 +401,6 @@ void FtlImpl_HCWF::check_ftl_hotness_integrity()
     {
         const ulong lpn = pair.first;
         const Address &addr = pair.second;
-        assert(blockIsHot[addr.package][addr.die][addr.plane][addr.block] == hcID.is_hot(lpn));
+        assert(blockIsHot[addr.package][addr.die][addr.plane][addr.block] == hcID->is_hot(lpn));
     }
 }

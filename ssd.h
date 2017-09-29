@@ -31,6 +31,7 @@
 #include <random>
 #include <queue>
 #include <map>
+#include <set>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/identity.hpp>
 #include <boost/multi_index/ordered_index.hpp>
@@ -357,20 +358,17 @@ public:
     HotColdID() = default;
     virtual ~HotColdID() = default;
     virtual bool is_hot(const ulong lpn) const = 0;
-    virtual void next_request() = 0;
 };
 
 class Oracle_HCID : public HotColdID
 {
 public:
-    Oracle_HCID(std::vector<Event> &events, std::vector<bool> &requestIsHot);
+    Oracle_HCID(const std::vector<Event> & events);//, uint nrFrames);
     virtual ~Oracle_HCID();
     bool is_hot(const ulong lpn) const;
-    void next_request();
+    ///@TODO void next_frame();
 private:
-    uint currentRequest;
-    uint numRequests;
-    std::vector<bool> requestHotness;
+    std::set<ulong> hotSet;
 };
 
 class Static_HCID : public HotColdID
@@ -379,7 +377,6 @@ public:
     Static_HCID(ulong maxLPN, double hotFraction = HOT_FRACTION);
     virtual ~Static_HCID();
     bool is_hot(const ulong lpn) const;
-    void next_request();
 private:
     ulong maxLPN;
     double hotFraction;
@@ -508,6 +505,7 @@ public:
     double get_time_taken(void) const;
     double get_bus_wait_time(void) const;
     bool get_noop(void) const;
+    bool is_hot() const;
     Event *get_next(void) const;
     void set_address(const Address &address);
     void set_merge_address(const Address &address);
@@ -517,6 +515,7 @@ public:
     void set_payload(void *payload);
     void set_event_type(const enum event_type &type);
     void set_noop(bool value);
+    void set_hot(bool isHot);
     void *get_payload(void) const;
     double incr_bus_wait_time(double time);
     double incr_time_taken(double time_incr);
@@ -536,11 +535,12 @@ private:
     void *payload;
     Event *next;
     bool noop;
+    bool hot;
 };
 
 ulong count_unique_lpns(const std::vector<Event> &events);
 std::vector<Event> read_event_from_trace(std::string fileName, std::function<Event (std::string)> readLine);
-std::vector<bool> read_oracle(std::string filename);
+void read_oracle(const std::string &filename, std::vector<Event> &events);
 Event read_event_simple(std::string line);
 Event read_event_BIOtracer(std::string line);
 
@@ -957,7 +957,7 @@ public:
     virtual ~FtlParent ();
 
     virtual void initialize(const ulong numUniqueLPN);
-    virtual void initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness);
+    virtual void initialize(const std::vector<Event> &events);
 
     virtual enum status read(Event &event) = 0;
     virtual enum status write(Event &event) = 0;
@@ -1194,7 +1194,7 @@ public:
     //FtlImpl_DWF(Controller &controller, const std::vector<Event> &events);
     ~FtlImpl_DWF();
     void initialize(const ulong numUniqueLPN);
-    void initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness);
+    void initialize(const std::vector<Event> &events);
     enum status read(Event &event);
     enum status write(Event &event);
     enum status trim(Event &event);
@@ -1223,7 +1223,7 @@ public:
     FtlImpl_HCWF(Controller &controller, HotColdID *hcID);
     ~FtlImpl_HCWF();
     virtual void initialize(const ulong numUniqueLPN);
-    void initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness);
+    void initialize(const std::vector<Event> &events);
     enum status read(Event &event);
     enum status write(Event &event);
     enum status trim(Event &event);
@@ -1273,7 +1273,7 @@ public:
     Controller(Ssd &parent, HotColdID *hcID);
     ~Controller(void);
     void initialize(const ulong numLPN);
-    void initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness);
+    void initialize(const std::vector<Event> &events);
     enum status event_arrive(Event &event);
     friend class FtlParent;
     friend class FtlImpl_Page;
@@ -1324,7 +1324,7 @@ public:
     Ssd (uint ssd_size = SSD_SIZE, HotColdID *hcID = nullptr);
     ~Ssd(void);
     void initialize(const ulong numUniqueLPNs);
-    void initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness);
+    void initialize(const std::vector<Event> &events);
     double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time);
     double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time, void *buffer);
     friend class Controller;

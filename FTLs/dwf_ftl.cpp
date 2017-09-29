@@ -37,7 +37,7 @@ void FtlImpl_DWF::initialize(const ulong numLPN)
     WFI = Address(0,0,0,1,0,PAGE);
     WFIPtr = controller.get_block_pointer(WFI);
 
-    for(unsigned int lpn = 0; lpn < numLPN; lpn++)
+    for(ulong lpn = 0; lpn < numLPN; lpn++)
     {
         bool success = false;
         //const bool lpnIsHot = hcID.is_hot(lpn);
@@ -67,7 +67,7 @@ void FtlImpl_DWF::initialize(const ulong numLPN)
     }
 }
 
-void FtlImpl_DWF::initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness)
+void FtlImpl_DWF::initialize(const std::vector<Event> &events)
 {
     // Just assume for now that we have PAGE validity, we'll check it later anyway
     Address addr(0,0,0,0,0,PAGE);
@@ -79,9 +79,9 @@ void FtlImpl_DWF::initialize(const std::vector<Event> &events, const std::vector
     //const uint maxHotBlocks = std::ceil(HOT_FRACTION*PLANE_SIZE) + 1;
     //const uint numColdBlocks = PLANE_SIZE - maxHotBlocks;
 
-    for(unsigned int it = 0; it < events.size(); it++)
+    for(const Event &event : events)
     {
-        const ulong lpn = events[it].get_logical_address();
+        const ulong lpn = event.get_logical_address();
         bool success = false;
         //const bool lpnIsHot = hcID.is_hot(lpn);
         while(not success)
@@ -100,7 +100,7 @@ void FtlImpl_DWF::initialize(const std::vector<Event> &events, const std::vector
                 evt.set_address(addr);
                 block->write(evt);
                 map[lpn] = addr;
-                if(eventHotness[it])
+                if(event.is_hot())
                 {
                     hotValidPages[addr.package][addr.die][addr.plane][addr.block]++;
                 }

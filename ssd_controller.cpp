@@ -93,10 +93,9 @@ void Controller::initialize(const ulong numLPN)
     return;
 }
 
-///@TODO Reduce to 1 argument by assigning hotness to Event itself
-void Controller::initialize(const std::vector<Event> &events, const std::vector<bool> &eventHotness)
+void Controller::initialize(const std::vector<Event> &events)
 {
-    ftl->initialize(events, eventHotness);
+    ftl->initialize(events);
     return;
 }
 

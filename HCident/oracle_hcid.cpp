@@ -29,9 +29,13 @@
 
 using namespace ssd;
 
-Oracle_HCID::Oracle_HCID(std::vector<Event> &events, std::vector<bool> &requestIsHot)
-    : currentRequest(0), numRequests(events.size()), requestHotness(requestIsHot)
+Oracle_HCID::Oracle_HCID(const std::vector<Event> &events)
 {
+    ///@TODO Do this for several frames
+    for(const Event &event : events)
+    {
+        if(event.is_hot()) hotSet.insert(event.get_logical_address());
+    }
 }
 
 Oracle_HCID::~Oracle_HCID()
@@ -40,10 +44,5 @@ Oracle_HCID::~Oracle_HCID()
 
 bool Oracle_HCID::is_hot(const ulong lpn) const
 {
-    return requestHotness[currentRequest];
-}
-
-void Oracle_HCID::next_request()
-{
-    currentRequest = (currentRequest + 1) % numRequests;
+    return hotSet.find(lpn) != hotSet.end();
 }

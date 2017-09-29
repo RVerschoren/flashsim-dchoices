@@ -49,8 +49,8 @@ int main(int argc, char *argv[])
     const ulong numUniqueLPNs = count_unique_lpns(events);
 
     PLANE_SIZE = std::ceil( (double) numUniqueLPNs / (double) (BLOCK_SIZE * (1.0-SPARE_FACTOR)) );
-    //Example oracle filename
-    std::vector<bool> oracle = read_oracle( create_oracle_filename(traceID, HOT_FRACTION, nrFrames) );
+
+    read_oracle( create_oracle_filename(traceID, HOT_FRACTION, nrFrames), events);
 
     //Example format filename : 'dwf-b',I2,'-d',I3,'-rho',F4.2,'-r',F5.3,'-f',F5.3,'-WA.',I2,'.csv';
     std::stringstream sstr;
@@ -67,10 +67,10 @@ int main(int argc, char *argv[])
     for(uint run = startrun; run < (startrun+nruns); run ++ )
     {
         RandNrGen::getInstance().reset();
-        HotColdID *hcID = new Oracle_HCID(events, oracle);
+        HotColdID *hcID = new Oracle_HCID(events);
 
         Ssd ssd(SSD_SIZE, hcID);
-        ssd.initialize(events, oracle);
+        ssd.initialize(events);
 
         const Controller &ctrl = ssd.get_controller();
         uint it = 0;
@@ -79,7 +79,6 @@ int main(int argc, char *argv[])
             const Event &evt = events[it];
             ssd.event_arrive(evt.get_event_type(), evt.get_logical_address(), evt.get_size(), evt.get_start_time());//Timings don't really matter for PE fairness/SSD endurance
             it = (it + 1) % numRequests;
-            hcID->next_request();
         }
         ssd.write_statistics_csv(fileName, run);
     }

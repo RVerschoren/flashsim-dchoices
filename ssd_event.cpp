@@ -270,7 +270,17 @@ ioreq_event &Event::operator= (const ioreq_event &rhs)
 }
 #endif
 
-std::vector<bool> ssd::read_oracle(std::string filename)
+void Event::set_hot(const bool isHot)
+{
+    hot = isHot;
+}
+
+bool Event::is_hot() const
+{
+    return hot;
+}
+
+void ssd::read_oracle(const std::string &filename, std::vector<Event> &events)
 {
     std::ifstream data(filename);
     std::vector<bool> oracle;
@@ -283,7 +293,13 @@ std::vector<bool> ssd::read_oracle(std::string filename)
         const bool value = std::stoi(cell) != 0;
         oracle.push_back(value);
     }
-    return oracle;
+    //return oracle;
+    std::cout << filename << "    "  << oracle.size() << "    " << events.size() << std::endl;
+    assert(oracle.size() == events.size());
+    for(ulong it = 0; it < events.size(); it++)
+    {
+        events[it].set_hot(oracle[it]);
+    }
 }
 
 

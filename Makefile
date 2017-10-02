@@ -1,8 +1,8 @@
 CXX=g++
-#CXXFLAGS=-Wall -c -std=c++11  -g -pg -DUSE_BLOCKMGR -DCHECK_VALID_PAGE -DCHECK_HOT_VALID_PAGES
+CXXFLAGS=-Wall -c -std=c++11 -DUSE_BLOCKMGR
+#CXXFLAGS=-Wall -c -std=c++11 -g -pg -DUSE_BLOCKMGR -DCHECK_VALID_PAGE -DCHECK_HOT_VALID_PAGES
 #CXXFLAGS=-Wall -c -std=c++11 -g -pg -O2 -DUSE_BLOCKMGR -DNDEBUG
-#LDFLAGS= -pg
-CXXFLAGS=-Wall -c -std=c++11 -O3 -DNDEBUG -DUSE_BLOCKMGR
+#CXXFLAGS=-Wall -c -std=c++11 -O3 -DNDEBUG -DUSE_BLOCKMGR
 LDFLAGS=
 HEADERS=ssd.h
 SOURCES_SSDLIB = $(filter-out ssd_ftl.cpp, $(wildcard ssd_*.cpp))  \
@@ -17,6 +17,17 @@ PROGRAMS = $(patsubst run_%.cpp,%,$(SOURCES_RUNS))
 
 
 all: $(PROGRAMS)
+
+debug: CXXFLAGS += -DDEBUG -g -pg -DCHECK_VALID_PAGES -DCHECK_HOT_VALID_PAGES
+debug: LDFLAGS += -pg
+debug: $(PROGRAMS)
+
+profile: CXXFLAGS += -g -pg -O2 -DNDEBUG
+profile: LDFLAGS += -pg
+profile: $(PROGRAMS)
+
+release: CXXFLAGS += -O3 -DNDEBUG
+release: $(PROGRAMS)
 
 .cpp.o: $(HEADERS)
 	$(CXX) $(CXXFLAGS) $< -o $@

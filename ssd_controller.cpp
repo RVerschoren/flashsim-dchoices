@@ -72,6 +72,10 @@ Controller::Controller(Ssd &parent, HotColdID *hcID):
         assert(hcID != nullptr);
         ftl = new FtlImpl_HCWF(*this, hcID);
         break;
+    case 8:
+        assert(hcID != nullptr);
+        ftl = new FtlImpl_COLD(*this, hcID);
+        break;
     ///@TODO: Implement and enable remaining FTLs
     }
     return;

@@ -74,11 +74,14 @@ int main(int argc, char *argv[])
 
         const Controller &ctrl = ssd.get_controller();
         uint it = 0;
+        double startTime = 0.0;
         while(ctrl.stats.get_currentPE() > maxPE)
         {
             const Event &evt = events[it];
-            ssd.event_arrive(evt.get_event_type(), evt.get_logical_address(), evt.get_size(), evt.get_start_time());//Timings don't really matter for PE fairness/SSD endurance
+
+            ssd.event_arrive(evt.get_event_type(), evt.get_logical_address(), evt.get_size(), startTime);//Timings don't really matter for PE fairness/SSD endurance
             it = (it + 1) % numRequests;
+            startTime += 5 * ((evt.get_event_type() == READ)? PAGE_READ_DELAY : PAGE_WRITE_DELAY);
         }
         ssd.write_statistics_csv(fileName, run);
     }

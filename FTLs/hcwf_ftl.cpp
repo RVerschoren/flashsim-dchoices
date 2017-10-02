@@ -141,28 +141,31 @@ void FtlImpl_HCWF::initialize(const std::vector<Event> &events)
         const ulong lpn = events[it].get_logical_address();
         bool success = false;
         const bool lpnIsHot = events[it].is_hot();
-        while(not success)
+        if(map.find(lpn) == map.end())
         {
-            addr.package = RandNrGen::getInstance().get(SSD_SIZE);
-            addr.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
-            addr.plane = RandNrGen::getInstance().get(DIE_SIZE);
-            if(lpnIsHot)
+            while(not success)
             {
-                addr.block =  RandNrGen::getInstance().get(maxHotBlocks);
-            } else {
-                addr.block =  maxHotBlocks + RandNrGen::getInstance().get(numColdBlocks);
-            }
-            assert(addr.check_valid() >= BLOCK);
+                addr.package = RandNrGen::getInstance().get(SSD_SIZE);
+                addr.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
+                addr.plane = RandNrGen::getInstance().get(DIE_SIZE);
+                if(lpnIsHot)
+                {
+                    addr.block =  RandNrGen::getInstance().get(maxHotBlocks);
+                } else {
+                    addr.block =  maxHotBlocks + RandNrGen::getInstance().get(numColdBlocks);
+                }
+                assert(addr.check_valid() >= BLOCK);
 
-            Block * block = controller.get_block_pointer(addr);
+                Block * block = controller.get_block_pointer(addr);
 
-            if(block != HWFPtr and block != CWFPtr and block->get_next_page(addr) == SUCCESS){
-                ///@TODO Should we avoid the controller? Perhaps, to not count the time taken for initializing the disk...
-                Event evt(WRITE, lpn, 1, 0);
-                evt.set_address(addr);
-                block->write(evt);
-                map[lpn] = addr;
-                success = true;
+                if(block != HWFPtr and block != CWFPtr and block->get_next_page(addr) == SUCCESS){
+                    ///@TODO Should we avoid the controller? Perhaps, to not count the time taken for initializing the disk...
+                    Event evt(WRITE, lpn, 1, 0);
+                    evt.set_address(addr);
+                    block->write(evt);
+                    map[lpn] = addr;
+                    success = true;
+                }
             }
         }
     }
@@ -197,8 +200,8 @@ enum status FtlImpl_HCWF::read(Event &event)
 
 enum status FtlImpl_HCWF::write(Event &event)
 {
-    #ifdef CHECK_VALID_PAGES
-    check_valid_pages(numLPN);
+    #if defined DEBUG || defined CHECK_VALID_PAGES
+    check_valid_pages(map.size());
     #endif
     #ifndef NDEBUG
     check_block_hotness();
@@ -339,8 +342,8 @@ enum status FtlImpl_HCWF::write(Event &event)
         map[lpn] = CWF;
     }
 
-    #ifdef CHECK_VALID_PAGES
-    check_valid_pages(numLPN);
+    #if defined DEBUG || defined CHECK_VALID_PAGES
+    check_valid_pages(map.size());
     #endif
 
     return SUCCESS;

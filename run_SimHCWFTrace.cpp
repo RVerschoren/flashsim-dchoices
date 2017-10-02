@@ -1,4 +1,4 @@
-/* Trace simulations with DWF
+/* Trace simulations with HCWF
  * Robin Verschoren 2017
  */
 
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     const ulong numUniqueLPNs = count_unique_lpns(events);
 
     PLANE_SIZE = std::ceil( (double) numUniqueLPNs / (double) (BLOCK_SIZE * (1.0-SPARE_FACTOR)) );
-    //Example oracle filename
+
     read_oracle( create_oracle_filename(traceID, HOT_FRACTION, nrFrames), events);
 
     //Example format filename : 'dwf-b',I2,'-d',I3,'-rho',F4.2,'-r',F5.3,'-f',F5.3,'-WA.',I2,'.csv';
@@ -74,11 +74,13 @@ int main(int argc, char *argv[])
 
         const Controller &ctrl = ssd.get_controller();
         uint it = 0;
+        double startTime = 0.0;
         while(ctrl.stats.get_currentPE() > maxPE)
         {
             const Event &evt = events[it];
-            ssd.event_arrive(evt.get_event_type(), evt.get_logical_address(), evt.get_size(), evt.get_start_time());//Timings don't really matter for PE fairness/SSD endurance
+            ssd.event_arrive(evt.get_event_type(), evt.get_logical_address(), evt.get_size(), startTime );//Timings don't really matter for PE fairness/SSD endurance
             it = (it + 1) % numRequests;
+            startTime += 5*((evt.get_event_type() == READ)? PAGE_READ_DELAY : PAGE_WRITE_DELAY);
         }
         ssd.write_statistics_csv(fileName, run);
     }

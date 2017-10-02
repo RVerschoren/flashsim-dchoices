@@ -1204,6 +1204,7 @@ private:
 
     // Correctness verification
     void check_ftl_integrity(const ulong writtenLPN);
+    void check_ftl_integrity();
     void check_valid_pages(const ulong numLPN);
     void check_hot_pages(Address block, Block *blockPtr, const uint hotPages);
 
@@ -1233,6 +1234,36 @@ private:
     void check_block_hotness();
     void check_ftl_hotness_integrity();
 
+    uint numHotBlocks;
+    uint maxHotBlocks;
+    Block *CWFPtr; // Cold WF
+    Address CWF;
+    Block *HWFPtr; // Hot WF
+    Address HWF;
+    std::map<ulong, Address> map;
+    HotColdID *hcID;
+    std::vector< std::vector< std::vector< std::vector<bool> > > > blockIsHot;
+};
+
+class FtlImpl_COLD: public FtlParent
+{
+public:
+    FtlImpl_COLD(Controller &controller, HotColdID *hcID, const uint d = DCHOICES_D);
+    ~FtlImpl_COLD();
+    virtual void initialize(const ulong numUniqueLPN);
+    void initialize(const std::vector<Event> &events);
+    enum status read(Event &event);
+    enum status write(Event &event);
+    enum status trim(Event &event);
+private:
+    void gca_collect_COLD(Address &victimAddress, const bool replacingCWF);
+    //Correctness verification
+    void check_valid_pages(const ulong numLPN);
+    void check_block_hotness();
+    void check_ftl_hotness_integrity();
+
+    uint d;
+    ulong FIFOCounter;
     uint numHotBlocks;
     uint maxHotBlocks;
     Block *CWFPtr; // Cold WF

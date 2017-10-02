@@ -69,6 +69,11 @@ void FtlImpl_DWF::initialize(const ulong numLPN)
 
 void FtlImpl_DWF::initialize(const std::vector<Event> &events)
 {
+    #if defined DEBUG || defined CHECK_VALID_PAGES
+    check_valid_pages(map.size());
+    check_ftl_integrity();
+    #endif
+
     // Just assume for now that we have PAGE validity, we'll check it later anyway
     Address addr(0,0,0,0,0,PAGE);
     WFE = addr;
@@ -84,30 +89,45 @@ void FtlImpl_DWF::initialize(const std::vector<Event> &events)
         const ulong lpn = event.get_logical_address();
         bool success = false;
         //const bool lpnIsHot = hcID.is_hot(lpn);
-        while(not success)
+        if(map.find(lpn) == map.end())
         {
-            addr.package = RandNrGen::getInstance().get(SSD_SIZE);
-            addr.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
-            addr.plane = RandNrGen::getInstance().get(DIE_SIZE);
-            addr.block = RandNrGen::getInstance().get(PLANE_SIZE);
-            assert(addr.check_valid() >= BLOCK);
+            while(not success)
+            {
+                addr.package = RandNrGen::getInstance().get(SSD_SIZE);
+                addr.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
+                addr.plane = RandNrGen::getInstance().get(DIE_SIZE);
+                addr.block = RandNrGen::getInstance().get(PLANE_SIZE);
+                assert(addr.check_valid() >= BLOCK);
 
-            Block * block = controller.get_block_pointer(addr);
+                Block * block = controller.get_block_pointer(addr);
 
-            if(block != WFEPtr and block != WFIPtr and block->get_next_page(addr) == SUCCESS){
-                ///@TODO Should we avoid the controller? Perhaps, to not count the time taken for initializing the disk...
-                Event evt(WRITE, lpn, 1, 0);
-                evt.set_address(addr);
-                block->write(evt);
-                map[lpn] = addr;
-                if(event.is_hot())
-                {
-                    hotValidPages[addr.package][addr.die][addr.plane][addr.block]++;
+                if(block != WFEPtr and block != WFIPtr and block->get_next_page(addr) == SUCCESS){
+                    #if defined DEBUG || defined CHECK_VALID_PAGES
+                    check_valid_pages(map.size());
+                    check_ftl_integrity();
+                    #endif
+                    ///@TODO Should we avoid the controller? Perhaps, to not count the time taken for initializing the disk...
+                    Event evt(WRITE, lpn, 1, 0);
+                    evt.set_address(addr);
+                    block->write(evt);
+                    map[lpn] = addr;
+                    if(event.is_hot())
+                    {
+                        hotValidPages[addr.package][addr.die][addr.plane][addr.block]++;
+                    }
+                    success = true;
+                    #if defined DEBUG || defined CHECK_VALID_PAGES
+                    check_valid_pages(map.size());
+                    check_ftl_integrity();
+                    #endif
                 }
-                success = true;
             }
         }
     }
+    #if defined DEBUG || defined CHECK_VALID_PAGES
+    check_valid_pages(map.size());
+    check_ftl_integrity();
+    #endif
 }
 
 
@@ -147,8 +167,8 @@ void FtlImpl_DWF::modify_ftl_page(const ulong lpn, const uint  newPage)
 
 enum status FtlImpl_DWF::write(Event &event)
 {
-    #ifdef CHECK_VALID_PAGES
-    check_valid_pages(numLPN);
+    #if defined DEBUG || defined CHECK_VALID_PAGES
+    check_valid_pages(map.size());
     check_ftl_integrity();
     #endif
     controller.stats.numFTLWrite++;
@@ -196,7 +216,7 @@ enum status FtlImpl_DWF::write(Event &event)
             );
 
             const uint hotPages = hotValidPages[WFE.package][WFE.die][WFE.plane][WFE.block];
-            #ifdef CHECK_HOT_VALID_PAGES
+            #if defined DEBUG || defined CHECK_VALID_PAGES
             check_hot_pages(WFE, WFEPtr, hotPages);
             #endif
             controller.stats.WFEHotPagesDist[hotPages] =  controller.stats.WFEHotPagesDist[hotPages]+1;
@@ -217,7 +237,7 @@ enum status FtlImpl_DWF::write(Event &event)
             );
 
             const uint hotPages = hotValidPages[WFI.package][WFI.die][WFI.plane][WFI.block];
-            #ifdef CHECK_HOT_VALID_PAGES
+            #if defined DEBUG || defined CHECK_VALID_PAGES
             check_hot_pages(WFI, WFIPtr, hotPages);
             #endif
 
@@ -234,6 +254,7 @@ enum status FtlImpl_DWF::write(Event &event)
 
     }
 
+
     event.set_address(WFE);//Tell WF to write to this (next) page
     map[lpn] = WFE;
     if(hcID->is_hot(lpn))
@@ -241,9 +262,9 @@ enum status FtlImpl_DWF::write(Event &event)
         hotValidPages[WFE.package][WFE.die][WFE.plane][WFE.block]++;
     }
     assert(controller.get_page_pointer(WFE)->get_state() == EMPTY);
-    #ifdef CHECK_VALID_PAGES
-        check_valid_pages(numLPN-1); //1 LPN "missing": the one we are writing next
-        check_ftl_integrity();
+    #if defined DEBUG  || defined CHECK_VALID_PAGES
+        check_valid_pages(map.size()-1); //1 LPN "missing": the one we are writing next
+        check_ftl_integrity(lpn);
     #endif
 
     return SUCCESS;
@@ -282,6 +303,33 @@ void FtlImpl_DWF::check_ftl_integrity(const ulong lpn)
                         if(controller.get_page_pointer(addr)->get_state() == VALID){
                             const ulong la = controller.get_page_pointer(addr)->get_logical_address();
                             assert(la != lpn);// WAS INVALIDATED!
+                            assert(map[la].block == b);
+                            assert(map[la].page == p);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void FtlImpl_DWF::check_ftl_integrity()
+{
+    for(std::pair<ulong,Address> pair : map){
+        const ulong l = pair.first;
+        Address addr = map[l];
+        assert(controller.get_page_pointer(addr)->get_state() == VALID);
+        const ulong la = controller.get_page_pointer(addr)->get_logical_address();
+        assert(la == l);
+    }
+    for(uint package = 0; package < SSD_SIZE; package++){
+        for(uint die = 0; die < PACKAGE_SIZE; die++){
+            for(uint plane = 0; plane < DIE_SIZE; plane++){
+                for(uint b = 0; b < PLANE_SIZE; b++){
+                    for(uint p = 0; p < BLOCK_SIZE; p++){
+                        Address addr(package,die,plane,b,p,PAGE);
+                        if(controller.get_page_pointer(addr)->get_state() == VALID){
+                            const ulong la = controller.get_page_pointer(addr)->get_logical_address();
                             assert(map[la].block == b);
                             assert(map[la].page == p);
                         }

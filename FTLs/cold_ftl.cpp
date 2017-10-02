@@ -28,12 +28,7 @@
 
 using namespace ssd;
 
-ulong block_address_to_linear_address(const Address &address)
-{
-    return address.block + PLANE_SIZE*(address.plane + DIE_SIZE*(address.die + PACKAGE_SIZE*address.package));
-}
-
-void FtlImpl_HCWF::initialize(const ulong numLPN)
+void FtlImpl_COLD::initialize(const ulong numLPN)
 {
     // Just assume for now that we have PAGE validity, we'll check it later anyway
     Address addr(0,0,0,0,0,PAGE);
@@ -104,7 +99,7 @@ void FtlImpl_HCWF::initialize(const ulong numLPN)
 }
 
 
-void FtlImpl_HCWF::initialize(const std::vector<Event> &events)
+void FtlImpl_COLD::initialize(const std::vector<Event> &events)
 {
     // Just assume for now that we have PAGE validity, we'll check it later anyway
     Address addr(0,0,0,0,0,PAGE);
@@ -178,18 +173,18 @@ void FtlImpl_HCWF::initialize(const std::vector<Event> &events)
     #endif
 }
 
-FtlImpl_HCWF::FtlImpl_HCWF(Controller &controller, HotColdID *hcID):
-    FtlParent(controller), map(),  hcID(hcID), blockIsHot(SSD_SIZE,  std::vector<std::vector<std::vector<bool> > >(PACKAGE_SIZE, std::vector<std::vector<bool> >(DIE_SIZE, std::vector<bool>(PLANE_SIZE,false))))
+FtlImpl_COLD::FtlImpl_COLD(Controller &controller, HotColdID *hcID, const uint d):
+    FtlParent(controller), map(),  hcID(hcID), blockIsHot(SSD_SIZE,  std::vector<std::vector<std::vector<bool> > >(PACKAGE_SIZE, std::vector<std::vector<bool> >(DIE_SIZE, std::vector<bool>(PLANE_SIZE,false)))), d(d), FIFOCounter(0)
 {
     return;
 }
 
-FtlImpl_HCWF::~FtlImpl_HCWF(void)
+FtlImpl_COLD::~FtlImpl_COLD(void)
 {
     return;
 }
 
-enum status FtlImpl_HCWF::read(Event &event)
+enum status FtlImpl_COLD::read(Event &event)
 {
     controller.stats.numFTLRead++;
     const uint lpn = event.get_logical_address();
@@ -198,7 +193,52 @@ enum status FtlImpl_HCWF::read(Event &event)
     return SUCCESS;
 }
 
-enum status FtlImpl_HCWF::write(Event &event)
+void FtlImpl_COLD::gca_collect_COLD(Address &victimAddress, const bool replacingCWF)
+{
+    if(replacingCWF and d > 0) ///@TODO Remove FIFO hack
+    {
+        if(d == 0) ///@TODO Remove FIFO hack
+        {
+            FIFOCounter = (FIFOCounter + 1) % PLANE_SIZE;
+            victimAddress.block = FIFOCounter;
+        }else{
+            Address address(victimAddress);
+            assert(address.check_valid() >= PLANE);
+            address.valid = BLOCK;//Make sure this is the case
+            uint minValidPages = BLOCK_SIZE + 1;
+            bool COLDvictim = false;
+            for(uint i = 0; i < d; i++)
+            {
+                address.package = RandNrGen::getInstance().get(SSD_SIZE);
+                address.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
+                address.plane = RandNrGen::getInstance().get(DIE_SIZE);
+                address.block = RandNrGen::getInstance().get(PLANE_SIZE);
+                assert(address.check_valid() >= BLOCK);
+
+                const uint validPages = get_pages_valid(address);
+                const bool potentialVictimIsColdBlock = not blockIsHot[address.package][address.die][address.plane][address.block];
+                ///Only allow hot victim blocks if we don't have a cold victim already
+                // This prefers cold victims and should limit the amount of hot->cold block conversions
+                if(minValidPages > validPages
+                        and
+                        (
+                            potentialVictimIsColdBlock
+                            or not COLDvictim
+                        )
+                    ){
+                    minValidPages = validPages;
+                    victimAddress = address;
+                    COLDvictim = potentialVictimIsColdBlock;
+                }
+            }
+        }
+        victimAddress.valid = PAGE;
+    }else{
+        garbage->collect(victimAddress);
+    }
+}
+
+enum status FtlImpl_COLD::write(Event &event)
 {
     #if defined DEBUG || defined CHECK_VALID_PAGES
     check_valid_pages(map.size());
@@ -227,7 +267,7 @@ enum status FtlImpl_HCWF::write(Event &event)
         Address  victim = (map.find(lpn) != map.end())?  map[lpn] : HWF;
         Block *victimPtr;
         do {
-            garbage->collect(victim);
+            this->gca_collect_COLD(victim, not HWFInitiated);
             victimPtr = controller.get_block_pointer(victim);
         } while(victimPtr == HWFPtr or victimPtr == CWFPtr);
 
@@ -350,7 +390,7 @@ enum status FtlImpl_HCWF::write(Event &event)
 }
 
 
-enum status FtlImpl_HCWF::trim(Event &event)
+enum status FtlImpl_COLD::trim(Event &event)
 {
     ///@TODO Implement
     const uint lpn = event.get_logical_address();
@@ -361,7 +401,7 @@ enum status FtlImpl_HCWF::trim(Event &event)
 
 
 
-void FtlImpl_HCWF::check_valid_pages(const ulong numLPN)
+void FtlImpl_COLD::check_valid_pages(const ulong numLPN)
 {
     uint numPages = 0;
     for(uint package = 0; package < SSD_SIZE; package++){
@@ -383,7 +423,7 @@ void FtlImpl_HCWF::check_valid_pages(const ulong numLPN)
     assert(numPages == numLPN);
 }
 
-void FtlImpl_HCWF::check_block_hotness()
+void FtlImpl_COLD::check_block_hotness()
 {
     uint numBlocks= 0;
     for(uint package = 0; package < SSD_SIZE; package++){
@@ -398,7 +438,7 @@ void FtlImpl_HCWF::check_block_hotness()
     assert(numBlocks == numHotBlocks);
 }
 
-void FtlImpl_HCWF::check_ftl_hotness_integrity()
+void FtlImpl_COLD::check_ftl_hotness_integrity()
 {
     for(std::pair<ulong,Address> pair : map)
     {

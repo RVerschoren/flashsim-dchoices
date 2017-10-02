@@ -1,3 +1,4 @@
+FTLs/cold_ftl.cpp
 FTLs/hcwf_ftl.cpp
 HCident/oracle_hcid.cpp
 HCident/static_hcid.cpp

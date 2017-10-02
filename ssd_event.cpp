@@ -324,7 +324,8 @@ Event ssd::read_event_simple(std::string line)
     const unsigned long startAddress = cell.empty()? 0UL : std::stoul(cell);
     std::getline(lineStream,cell,delim);
     const  event_type  type = (cell.empty() or std::stoi(cell) != 0)? WRITE : TRIM;
-    return Event(type, startAddress, 1, 0);
+    ///@TODO Find a better solution than negative start times to determine the right start time
+    return Event(type, startAddress, 1, -1.0);
 }
 
 Event ssd::read_event_BIOtracer(std::string line)
@@ -346,6 +347,12 @@ Event ssd::read_event_BIOtracer(std::string line)
     std::getline(lineStream,cell,delim);
     const unsigned int value = cell.empty()? 0UL : std::stoul(cell);
     const event_type type = value % 2 == 0? READ : WRITE;
+    std::getline(lineStream,cell,delim);
+    std::getline(lineStream,cell,delim);
+    //const double requestGenTime= cell.empty()? 0.0 : (std::stod(cell));
+    std::getline(lineStream,cell,delim);
+    std::getline(lineStream,cell,delim);
+    //const double requestProcessTime= cell.empty()? 0.0 : (std::stod(cell));
     std::getline(lineStream,cell,delim);
     std::getline(lineStream,cell,delim);
     const double startTime = cell.empty()? 0.0 : std::stod(cell);

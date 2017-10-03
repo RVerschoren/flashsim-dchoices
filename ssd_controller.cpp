@@ -97,9 +97,9 @@ void Controller::initialize(const ulong numLPN)
     return;
 }
 
-void Controller::initialize(const std::vector<Event> &events)
+void Controller::initialize(const std::set<ulong> &uniqueLPNs)
 {
-    ftl->initialize(events);
+    ftl->initialize(uniqueLPNs);
     return;
 }
 

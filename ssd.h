@@ -40,6 +40,7 @@
 #include <boost/multi_index/random_access_index.hpp>
 #include "util.h"
 #include <iostream>
+#include <fstream>
 
 #ifndef _SSD_H
 #define _SSD_H
@@ -363,7 +364,7 @@ public:
 class Oracle_HCID : public HotColdID
 {
 public:
-    Oracle_HCID(const std::vector<Event> & events);//, uint nrFrames);
+    Oracle_HCID(const std::set<ulong> &hotSet);
     virtual ~Oracle_HCID();
     bool is_hot(const ulong lpn) const;
     ///@TODO void next_frame();
@@ -538,12 +539,34 @@ private:
     bool hot;
 };
 
-ulong count_unique_lpns(const std::vector<Event> &events);
-std::vector<Event> read_event_from_trace(std::string fileName, std::function<Event (std::string)> readLine);
-void read_oracle(const std::string &filename, std::vector<Event> &events);
-Event read_event_simple(std::string line);
-Event read_event_BIOtracer(std::string line);
+enum EVENT_READER_MODE {EVTRDR_SIMPLE, EVTRDR_BIOTRACER};
 
+//ulong count_unique_lpns(const std::vector<Event> &events);
+////void read_event_from_trace(std::string fileName, std::function<Event (std::string)> readLine, std::vector<Event> &events);
+class EventReader
+{
+public:
+    EventReader(const std::string traceFileName, const ulong numEvents, const EVENT_READER_MODE mode, const std::string oracleFileName= "");
+    Event read_next_event();
+    std::set<ulong> read_accessed_lpns() const;//Scales with numEvents, avoid calling this frequently
+    std::set<ulong> read_hot_lpns() const;
+    std::vector<Event> read_events_from_trace(const std::string &traceFile) const;
+private:
+    Event read_event(const std::string &line) const;
+    Event read_event_simple(const std::string &line) const;
+    Event read_event_BIOtracer(const std::string &line) const;
+    bool read_next_oracle();
+
+
+    EVENT_READER_MODE readMode;
+    std::string traceFileName;
+    std::string oracleFileName;
+    ulong currentEvent;
+    ulong numEvents;
+    bool usingOracle;
+    std::ifstream traceStream;
+    std::ifstream oracleStream;
+};
 
 /* Single bus channel
  * Simulate multiple devices on 1 bus channel with variable bus transmission
@@ -957,7 +980,7 @@ public:
     virtual ~FtlParent ();
 
     virtual void initialize(const ulong numUniqueLPN);
-    virtual void initialize(const std::vector<Event> &events);
+    virtual void initialize(const std::set<ulong> &uniqueLPNs);
 
     virtual enum status read(Event &event) = 0;
     virtual enum status write(Event &event) = 0;
@@ -1194,7 +1217,7 @@ public:
     //FtlImpl_DWF(Controller &controller, const std::vector<Event> &events);
     ~FtlImpl_DWF();
     void initialize(const ulong numUniqueLPN);
-    void initialize(const std::vector<Event> &events);
+    void initialize(const std::set<ulong> &uniqueLPNs);
     enum status read(Event &event);
     enum status write(Event &event);
     enum status trim(Event &event);
@@ -1224,7 +1247,7 @@ public:
     FtlImpl_HCWF(Controller &controller, HotColdID *hcID);
     ~FtlImpl_HCWF();
     virtual void initialize(const ulong numUniqueLPN);
-    void initialize(const std::vector<Event> &events);
+    void initialize(const std::set<ulong> &uniqueLPNs);
     enum status read(Event &event);
     enum status write(Event &event);
     enum status trim(Event &event);
@@ -1304,7 +1327,7 @@ public:
     Controller(Ssd &parent, HotColdID *hcID);
     ~Controller(void);
     void initialize(const ulong numLPN);
-    void initialize(const std::vector<Event> &events);
+    void initialize(const std::set<ulong> &uniqueLPNs);
     enum status event_arrive(Event &event);
     friend class FtlParent;
     friend class FtlImpl_Page;
@@ -1355,7 +1378,8 @@ public:
     Ssd (uint ssd_size = SSD_SIZE, HotColdID *hcID = nullptr);
     ~Ssd(void);
     void initialize(const ulong numUniqueLPNs);
-    void initialize(const std::vector<Event> &events);
+    ///@TODO Pass EventReader instead of set of LPNs...
+    void initialize(const std::set<ulong> &uniqueLPNs);
     double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time);
     double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time, void *buffer);
     friend class Controller;

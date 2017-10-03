@@ -279,7 +279,7 @@ bool Event::is_hot() const
 {
     return hot;
 }
-
+/*
 void ssd::read_oracle(const std::string &filename, std::vector<Event> &events)
 {
     std::ifstream data(filename);
@@ -301,16 +301,21 @@ void ssd::read_oracle(const std::string &filename, std::vector<Event> &events)
         events[it].set_hot(oracle[it]);
     }
 }
-
-
-std::vector<Event> ssd::read_event_from_trace(std::string filename, std::function<Event (std::string)> readLine)
+*/
+/**
+ * @brief Reads events from a trace file
+ * @param filename Filename
+ * @param readLine Function to convert a line of the tracefile to an ssd::Event
+ * @param events Vector of ssd::Events, memory needs to be preallocated!
+ *//*
+void ssd::read_event_from_trace(std::string filename, std::function<Event (std::string)> readLine, std::vector<Event> &events)
 {
     std::ifstream data(filename);
-    std::vector<Event> events;
     std::string line;
+    unsigned long it = 0;
     while(std::getline(data,line))
     {
-        events.push_back(readLine(line));
+        events.at(it) = readLine(line);
     }
     return events;
 }
@@ -324,8 +329,8 @@ Event ssd::read_event_simple(std::string line)
     const unsigned long startAddress = cell.empty()? 0UL : std::stoul(cell);
     std::getline(lineStream,cell,delim);
     const  event_type  type = (cell.empty() or std::stoi(cell) != 0)? WRITE : TRIM;
-    ///@TODO Find a better solution than negative start times to determine the right start time
-    return Event(type, startAddress, 1, -1.0);
+    ///@TODO Find a better solution than zero start times to determine the right start time
+    return Event(type, startAddress, 1, 0.0);
 }
 
 Event ssd::read_event_BIOtracer(std::string line)
@@ -372,4 +377,4 @@ ulong ssd::count_unique_lpns(const std::vector<Event> &events)
         }
     }
     return uniqueLPNs.size();
-}
+}*/

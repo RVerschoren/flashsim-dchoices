@@ -29,13 +29,18 @@
 
 using namespace ssd;
 
-Oracle_HCID::Oracle_HCID(const std::vector<Event> &events)
+//Oracle_HCID::Oracle_HCID(const std::vector<Event> &events)
+//{
+//    ///@TODO Do this for several frames
+//    for(const Event &event : events)
+//    {
+//        if(event.is_hot()) hotSet.insert(event.get_logical_address());
+//    }
+//}
+
+Oracle_HCID::Oracle_HCID(const std::set<ulong> &hotSet)
+    :hotSet(hotSet)
 {
-    ///@TODO Do this for several frames
-    for(const Event &event : events)
-    {
-        if(event.is_hot()) hotSet.insert(event.get_logical_address());
-    }
 }
 
 Oracle_HCID::~Oracle_HCID()

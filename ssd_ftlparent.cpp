@@ -68,7 +68,7 @@ void FtlParent::initialize(const ulong numUniqueLPN)
     return;
 }
 
-void FtlParent::initialize(const std::vector<Event> &events)
+void FtlParent::initialize(const std::set<ulong> &uniqueLPNs)
 {
     assert(false);
     return;

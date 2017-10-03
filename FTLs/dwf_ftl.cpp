@@ -67,7 +67,7 @@ void FtlImpl_DWF::initialize(const ulong numLPN)
     }
 }
 
-void FtlImpl_DWF::initialize(const std::vector<Event> &events)
+void FtlImpl_DWF::initialize(const std::set<ulong> &uniqueLPNs)
 {
     #if defined DEBUG || defined CHECK_VALID_PAGES
     check_valid_pages(map.size());
@@ -84,11 +84,9 @@ void FtlImpl_DWF::initialize(const std::vector<Event> &events)
     //const uint maxHotBlocks = std::ceil(HOT_FRACTION*PLANE_SIZE) + 1;
     //const uint numColdBlocks = PLANE_SIZE - maxHotBlocks;
 
-    for(const Event &event : events)
+    for(const ulong lpn : uniqueLPNs)
     {
-        const ulong lpn = event.get_logical_address();
         bool success = false;
-        //const bool lpnIsHot = hcID.is_hot(lpn);
         if(map.find(lpn) == map.end())
         {
             while(not success)
@@ -111,7 +109,7 @@ void FtlImpl_DWF::initialize(const std::vector<Event> &events)
                     evt.set_address(addr);
                     block->write(evt);
                     map[lpn] = addr;
-                    if(event.is_hot())
+                    if(hcID->is_hot(lpn))///@TODO Fix
                     {
                         hotValidPages[addr.package][addr.die][addr.plane][addr.block]++;
                     }

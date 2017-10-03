@@ -63,21 +63,21 @@ int main(int argc, char *argv[])
     const std::string traceID=traceFile.substr(0,4);
     const std::string oracleFile = traceID + "-" + print_fract(hotFraction) + "-" + num2str(nrFrames) + "-oracle.csv";
 
-    std::function<ssd::Event (std::string)> readEvtFunc;
+    ssd::EVENT_READER_MODE mode;
     switch(std::stoi(argv[5]))
     {
         case 0:
-        readEvtFunc = ssd::read_event_simple;
+        mode = ssd::EVTRDR_SIMPLE;
         break;
         case 1:
-        readEvtFunc = ssd::read_event_BIOtracer;
+        mode = ssd::EVTRDR_BIOTRACER;
         break;
     default:
-        readEvtFunc = ssd::read_event_simple;
+        mode = ssd::EVTRDR_SIMPLE;
         break;
     }
-
-    std::vector<ssd::Event> requests = ssd::read_event_from_trace(traceFile, readEvtFunc);
+    ssd::EventReader evtRdr(traceFile,numReq, mode);
+    std::vector<ssd::Event> requests = evtRdr.read_events_from_trace(traceFile);
 
     //Every window/frame has indexes frameidxs = ((frameit-1)*framelength+1) : min(frameit*framelength, numreq); (1-based)
     //Loop through requests

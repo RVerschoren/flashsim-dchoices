@@ -104,7 +104,7 @@ void FtlImpl_HCWF::initialize(const ulong numLPN)
 }
 
 
-void FtlImpl_HCWF::initialize(const std::vector<Event> &events)
+void FtlImpl_HCWF::initialize(const std::set<ulong> &uniqueLPNs)
 {
     // Just assume for now that we have PAGE validity, we'll check it later anyway
     Address addr(0,0,0,0,0,PAGE);
@@ -136,11 +136,13 @@ void FtlImpl_HCWF::initialize(const std::vector<Event> &events)
     assert(numHotBlocks <= PLANE_SIZE);
 
     /// Initialize with events
-    for(ulong it = 0; it < events.size(); it++)
+    ///@TODO Fix for(ulong it = 0; it < events.size(); it++)
+    for(const ulong lpn : uniqueLPNs)
     {
-        const ulong lpn = events[it].get_logical_address();
+        //const ulong lpn = events[it].get_logical_address();
         bool success = false;
-        const bool lpnIsHot = events[it].is_hot();
+        const bool lpnIsHot = hcID->is_hot(lpn);
+        ///@TODO Fix const bool lpnIsHot = events[it].is_hot();
         if(map.find(lpn) == map.end())
         {
             while(not success)

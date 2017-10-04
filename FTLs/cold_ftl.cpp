@@ -99,7 +99,7 @@ void FtlImpl_COLD::initialize(const ulong numLPN)
 }
 
 
-void FtlImpl_COLD::initialize(const std::vector<Event> &events)
+void FtlImpl_COLD::initialize(const std::set<ulong> &uniqueLPNs)
 {
     // Just assume for now that we have PAGE validity, we'll check it later anyway
     Address addr(0,0,0,0,0,PAGE);
@@ -108,7 +108,7 @@ void FtlImpl_COLD::initialize(const std::vector<Event> &events)
 
     ///@TODO  Review how to determine first cold block when not assuming 1 plane
     const double f = HOT_FRACTION;
-    maxHotBlocks = std::ceil(f*PLANE_SIZE) + 1;
+    maxHotBlocks = std::ceil(f*PLANE_SIZE);
     const uint numColdBlocks = PLANE_SIZE - maxHotBlocks;
     CWF = Address(0,0,0,maxHotBlocks,0,PAGE);
     CWFPtr = controller.get_block_pointer(CWF);
@@ -131,11 +131,13 @@ void FtlImpl_COLD::initialize(const std::vector<Event> &events)
     assert(numHotBlocks <= PLANE_SIZE);
 
     /// Initialize with events
-    for(ulong it = 0; it < events.size(); it++)
+    ///@TODO Fix for(ulong it = 0; it < events.size(); it++)
+    for(const ulong lpn : uniqueLPNs)
     {
-        const ulong lpn = events[it].get_logical_address();
+        //const ulong lpn = events[it].get_logical_address();
         bool success = false;
-        const bool lpnIsHot = events[it].is_hot();
+        const bool lpnIsHot = hcID->is_hot(lpn);
+        ///@TODO Fix const bool lpnIsHot = events[it].is_hot();
         if(map.find(lpn) == map.end())
         {
             while(not success)
@@ -145,7 +147,7 @@ void FtlImpl_COLD::initialize(const std::vector<Event> &events)
                 addr.plane = RandNrGen::getInstance().get(DIE_SIZE);
                 if(lpnIsHot)
                 {
-                    addr.block =  RandNrGen::getInstance().get(maxHotBlocks);
+                    addr.block = RandNrGen::getInstance().get(maxHotBlocks -1);//Correct for HWF
                 } else {
                     addr.block =  maxHotBlocks + RandNrGen::getInstance().get(numColdBlocks);
                 }

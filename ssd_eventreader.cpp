@@ -30,16 +30,14 @@
 
 using namespace ssd;
 
-EventReader::EventReader(const std::string traceFileName, const ulong numEvents, const EVENT_READER_MODE mode, const std::string oracleFileName)
-    : traceFileName(traceFileName), numEvents(numEvents), readMode(mode), oracleFileName(oracleFileName), traceStream(traceFileName), currentEvent(0)
+EventReader::EventReader(const std::string traceFileName, const ulong numEvents, const EVENT_READER_MODE mode)
+    : traceFileName(traceFileName), currentEvent(0), numEvents(numEvents), readMode(mode), oracleFileName(oracleFileName), traceStream(traceFileName),  usingOracle(false)
 {
-    if(not this->oracleFileName.empty())
-    {
-        oracleStream = std::ifstream(this->oracleFileName);
-        usingOracle = true;
-    }else{
-        usingOracle = false;
-    }
+}
+
+EventReader::EventReader(const std::string traceFileName, const ulong numEvents, const EVENT_READER_MODE mode, const std::string oracleFileName)
+    : traceFileName(traceFileName), currentEvent(0), numEvents(numEvents), readMode(mode), oracleFileName(oracleFileName), traceStream(traceFileName), oracleStream(oracleFileName), usingOracle(true)
+{
 }
 
 /*

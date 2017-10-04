@@ -546,7 +546,8 @@ enum EVENT_READER_MODE {EVTRDR_SIMPLE, EVTRDR_BIOTRACER};
 class EventReader
 {
 public:
-    EventReader(const std::string traceFileName, const ulong numEvents, const EVENT_READER_MODE mode, const std::string oracleFileName= "");
+    EventReader(const std::string traceFileName, const ulong numEvents, const EVENT_READER_MODE mode);
+    EventReader(const std::string traceFileName, const ulong numEvents, const EVENT_READER_MODE mode, const std::string oracleFileName);
     Event read_next_event();
     std::set<ulong> read_accessed_lpns() const;//Scales with numEvents, avoid calling this frequently
     std::set<ulong> read_hot_lpns() const;
@@ -1274,7 +1275,7 @@ public:
     FtlImpl_COLD(Controller &controller, HotColdID *hcID, const uint d = DCHOICES_D);
     ~FtlImpl_COLD();
     virtual void initialize(const ulong numUniqueLPN);
-    void initialize(const std::vector<Event> &events);
+    void initialize(const std::set<ulong> &uniqueLPNs);
     enum status read(Event &event);
     enum status write(Event &event);
     enum status trim(Event &event);

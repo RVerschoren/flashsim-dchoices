@@ -65,13 +65,15 @@ int main(int argc, char *argv[])
     sstr << "-" << traceID;
     std::string fileName = sstr.str();
 
+    std::cout << "UNIQUE LPNS: " << uniqueLPNs.size() << " OF WHICH HOT " << hotLPNs.size() << std::endl;
+
     for(uint run = startrun; run < (startrun+nruns); run ++ )
     {
         RandNrGen::getInstance().reset();
         HotColdID *hcID = new Oracle_HCID(hotLPNs);
 
         Ssd ssd(SSD_SIZE, hcID);
-        ssd.initialize(hotLPNs);
+        ssd.initialize(uniqueLPNs);
 
         const Controller &ctrl = ssd.get_controller();
         uint it = 0;
@@ -84,6 +86,7 @@ int main(int argc, char *argv[])
             startTime += 5*((evt.get_event_type() == READ)? PAGE_READ_DELAY : PAGE_WRITE_DELAY);
         }
         ssd.write_statistics_csv(fileName, run);
+        delete hcID;
     }
     return 0;
 }

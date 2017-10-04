@@ -30,9 +30,13 @@ Block_manager *Block_manager::inst = NULL;
 
 FtlParent::FtlParent(Controller &controller) : controller(controller), garbage(nullptr)
 {
-    if(FTL_USE_BLOCKMANAGER) Block_manager::instance_initialize(this);
-
-    printf("Number of addressable blocks: %u\n", NUMBER_OF_ADDRESSABLE_BLOCKS);
+    if(FTL_USE_BLOCKMANAGER)
+    {
+        Block_manager::instance_initialize(this);
+        printf("Number of addressable blocks: %u\n", NUMBER_OF_ADDRESSABLE_BLOCKS);
+    }else{
+        printf("Number of addressable blocks: %u\n", PLANE_SIZE);
+    }
 
     ///@TODO Implement and enable remaining GCAs
     switch (GC_ALGORITHM)

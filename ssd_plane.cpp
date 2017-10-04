@@ -349,7 +349,7 @@ void Plane::get_free_page(Address &address) const
 
     address.page = data[address.block].get_pages_valid();
     address.valid = PAGE;
-    #ifndef USE_BLOCKMGR
+    #ifndef NOT_USE_BLOCKMGR
     address.set_linear_address(address.get_linear_address()+ address.page - (address.get_linear_address()%BLOCK_SIZE));
     #endif
     return;

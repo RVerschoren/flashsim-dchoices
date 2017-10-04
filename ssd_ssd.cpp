@@ -221,7 +221,7 @@ double Ssd::event_arrive(enum event_type type, ulong logical_address, uint size,
         fprintf(stderr, "Ssd error: %s: request failed:\n", __func__);
         event -> print(stderr);
     }
-
+    assert(event->get_address().valid == PAGE);
     /// Get the address determined by the FTL
     const Address &address = event->get_address();
     /// Handle the event
@@ -383,8 +383,11 @@ void Ssd::get_free_page(Address &address) const
 
 ssd::uint Ssd::get_num_free(const Address &address) const
 {
+    #ifndef NOT_USE_BLOCKMGR
     return 0;
-/* 	return data[address.package].get_num_free(address); */
+    #else
+    return data[address.package].get_num_free(address);
+    #endif
 }
 
 ssd::uint Ssd::get_num_valid(const Address &address) const

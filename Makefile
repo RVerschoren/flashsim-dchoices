@@ -1,5 +1,5 @@
-CXX=g++
-CXXFLAGS=-Wall -c -std=c++11 -DUSE_BLOCKMGR
+CXX=g++-4.9
+CXXFLAGS=-Wall -c -std=c++11 -DNOT_USE_BLOCKMGR
 #CXXFLAGS=-Wall -c -std=c++11 -g -pg -DUSE_BLOCKMGR -DCHECK_VALID_PAGE -DCHECK_HOT_VALID_PAGES
 #CXXFLAGS=-Wall -c -std=c++11 -g -pg -O2 -DUSE_BLOCKMGR -DNDEBUG
 #CXXFLAGS=-Wall -c -std=c++11 -O3 -DNDEBUG -DUSE_BLOCKMGR
@@ -22,11 +22,15 @@ debug: CXXFLAGS += -DDEBUG -g -pg -DCHECK_VALID_PAGES -DCHECK_HOT_VALID_PAGES
 debug: LDFLAGS += -pg
 debug: $(PROGRAMS)
 
+dbg: CXXFLAGS += -g -pg -DNDEBUG
+dbg: LDFLAGS += -pg
+dbg: $(PROGRAMS)
+
 profile: CXXFLAGS += -g -pg -O2 -DNDEBUG
 profile: LDFLAGS += -pg
 profile: $(PROGRAMS)
 
-release: CXXFLAGS += -O3 -DNDEBUG
+release: CXXFLAGS += -O2 -DNDEBUG
 release: $(PROGRAMS)
 
 .cpp.o: $(HEADERS)

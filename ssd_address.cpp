@@ -148,7 +148,7 @@ void Address::print(FILE *stream)
 
 void Address::set_linear_address(ulong address)
 {
-    #ifdef USE_BLOCKMGR
+    #ifdef NOT_USE_BLOCKMGR
     assert(false);
     #else
     real_address = address;

@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 
     for(uint run = startrun; run < (startrun+nruns); run ++ )
     {
-        RandNrGen::getInstance().reset();
+        RandNrGen::getInstance().reset(932117 + run + startrun-1);
         HotColdID *hcID = new Static_HCID(numLPN,HOT_FRACTION);
 
         Ssd ssd(SSD_SIZE, hcID);

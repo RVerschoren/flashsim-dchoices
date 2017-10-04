@@ -87,6 +87,7 @@ int main(int argc, char *argv[])
             startTime += 5 * ((evt.get_event_type() == READ)? PAGE_READ_DELAY : PAGE_WRITE_DELAY);
         }
         ssd.write_statistics_csv(fileName, run);
+        delete hcID;
     }
     return 0;
 }

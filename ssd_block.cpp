@@ -218,7 +218,7 @@ enum status Block::_erase_and_copy(Event &event, Address &copyBlock, Block *copy
     last_erase_time = event.get_start_time() + event.get_time_taken();
     erases_remaining--;
 
-    #ifndef USE_BLOCKMGR
+    #ifndef NOT_USE_BLOCKMGR
         Block_manager::instance()->update_block(this);
     #endif
 
@@ -318,7 +318,7 @@ enum status Block::get_next_page(Address &address) const
     {
         if(data[i].get_state() == EMPTY)
         {
-            #ifndef USE_BLOCKMGR
+            #ifndef NOT_USE_BLOCKMGR
             address.set_linear_address(i + physical_address - physical_address % BLOCK_SIZE, PAGE);
             #endif
             address.page = i;
@@ -336,7 +336,7 @@ enum status Block::get_next_page(uint &pageNr) const
     {
         if(data[i].get_state() == EMPTY)
         {
-            #ifndef USE_BLOCKMGR
+            #ifndef NOT_USE_BLOCKMGR
             address.set_linear_address(i + physical_address - physical_address % BLOCK_SIZE, PAGE);
             #endif
             pageNr = i;

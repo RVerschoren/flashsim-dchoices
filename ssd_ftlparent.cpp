@@ -41,9 +41,9 @@ FtlParent::FtlParent(Controller &controller) : controller(controller), garbage(n
     ///@TODO Implement and enable remaining GCAs
     switch (GC_ALGORITHM)
     {
-    //case 0:
-    //	garbage = new GC_FIFO();
-    //	break;
+    case 0:
+        garbage = new GCImpl_FIFO(this);
+        break;
     //case 1:
     //	garbage = new GCImpl_Greedy(*this);
     //	break;

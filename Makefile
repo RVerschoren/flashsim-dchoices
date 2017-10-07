@@ -1,5 +1,5 @@
-CXX=g++-4.9
-CXXFLAGS=-Wall -c -std=c++11 -DNOT_USE_BLOCKMGR
+CXX=g++
+CXXFLAGS=-Wall -c -std=c++11 -DNOT_USE_BLOCKMGR -DSINGLE_PLANE -DBYPASS_BUS -DNO_NOOP -DNO_BLOCK_STATE -DNO_PLANE_STATE
 #CXXFLAGS=-Wall -c -std=c++11 -g -pg -DUSE_BLOCKMGR -DCHECK_VALID_PAGE -DCHECK_HOT_VALID_PAGES
 #CXXFLAGS=-Wall -c -std=c++11 -g -pg -O2 -DUSE_BLOCKMGR -DNDEBUG
 #CXXFLAGS=-Wall -c -std=c++11 -O3 -DNDEBUG -DUSE_BLOCKMGR
@@ -12,7 +12,7 @@ SOURCES_SSDLIB = $(filter-out ssd_ftl.cpp, $(wildcard ssd_*.cpp))  \
                  $(wildcard util/*.cpp)                            \
                  SSDSim.cpp
 OBJECTS_SSDLIB=$(patsubst %.cpp,%.o,$(SOURCES_SSDLIB))
-SOURCES_RUNS = $(wildcard run_Sim*.cpp) run_ComputeOracle.cpp
+SOURCES_RUNS = $(wildcard run_Sim*.cpp) run_ComputeOracle.cpp run_ConvertBIOTrace.cpp
 PROGRAMS = $(patsubst run_%.cpp,%,$(SOURCES_RUNS))
 
 
@@ -30,8 +30,11 @@ profile: CXXFLAGS += -g -pg -O2 -DNDEBUG
 profile: LDFLAGS += -pg
 profile: $(PROGRAMS)
 
-release: CXXFLAGS += -O2 -DNDEBUG
+release: CXXFLAGS += -O3 -DNDEBUG
 release: $(PROGRAMS)
+
+fast: CXXFLAGS += -Ofast -DNDEBUG
+fast: $(PROGRAMS)
 
 .cpp.o: $(HEADERS)
 	$(CXX) $(CXXFLAGS) $< -o $@

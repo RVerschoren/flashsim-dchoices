@@ -92,6 +92,11 @@ ssd::ulong Event::get_logical_address(void) const
     return logical_address;
 }
 
+void Event::set_logical_address(const ulong newLPN)
+{
+    this->logical_address = newLPN;
+}
+
 const Address &Event::get_address(void) const
 {
     return address;

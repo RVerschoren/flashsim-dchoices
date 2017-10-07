@@ -120,6 +120,9 @@ enum status Plane::write(Event &event)
 {
     assert(event.get_address().block < size && event.get_address().valid > PLANE && next_page.valid >= BLOCK);
 
+    #ifdef NO_PLANE_STATE
+    return data[event.get_address().block].write(event);
+    #else
     enum block_state prev = data[event.get_address().block].get_state();
 
     status s = data[event.get_address().block].write(event);
@@ -133,6 +136,7 @@ enum status Plane::write(Event &event)
         free_blocks--;
 
     return s;
+    #endif
 }
 
 enum status Plane::replace(Event &event)
@@ -149,8 +153,9 @@ enum status Plane::replace(Event &event)
 enum status Plane::erase(Event &event)
 {
     assert(event.get_address().block < size && event.get_address().valid > PLANE);
-    enum status status = data[event.get_address().block]._erase(event);
 
+    enum status status = data[event.get_address().block]._erase(event);
+    #ifndef NO_PLANE_STATE
     /* update values if no errors */
     if(status == 1)
     {
@@ -161,6 +166,7 @@ enum status Plane::erase(Event &event)
         if(next_page.valid < PAGE)
             (void) get_next_page();
     }
+    #endif
     return status;
 }
 

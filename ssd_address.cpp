@@ -56,8 +56,13 @@ Address::Address(const Address *address)
 
 /* see "enum address_valid" in ssd.h for details on valid status */
 Address::Address(uint package, uint die, uint plane, uint block, uint page, enum address_valid valid):
+    #ifndef SINGLE_PLANE
     package(package),
     die(die),
+    #else
+    package(0),
+    die(0),
+    #endif
     plane(plane),
     block(block),
     page(page),
@@ -85,6 +90,7 @@ enum address_valid Address::check_valid(uint ssd_size, uint package_size, uint d
 {
     enum address_valid tmp = NONE;
 
+    #ifndef SINGLE_PLANE
     /* must check current valid status first
      * so we cannot expand the valid status */
     if(valid >= PACKAGE && package < ssd_size)
@@ -93,6 +99,7 @@ enum address_valid Address::check_valid(uint ssd_size, uint package_size, uint d
         if(valid >= DIE && die < package_size)
         {
             tmp = DIE;
+    #endif
             if(valid >= PLANE && plane < die_size)
             {
                 tmp = PLANE;
@@ -103,10 +110,12 @@ enum address_valid Address::check_valid(uint ssd_size, uint package_size, uint d
                         tmp = PAGE;
                 }
             }
+    #ifndef SINGLE_PLANE
         }
     }
     else
         tmp = NONE;
+    #endif
     valid = tmp;
     return valid;
 }
@@ -116,12 +125,14 @@ enum address_valid Address::check_valid(uint ssd_size, uint package_size, uint d
 enum address_valid Address::compare(const Address &address) const
 {
     enum address_valid match = NONE;
+    #ifndef SINGLE_PLANE
     if(package == address.package && valid >= PACKAGE && address.valid >= PACKAGE)
     {
         match = PACKAGE;
         if(die == address.die && valid >= DIE && address.valid >= DIE)
         {
             match = DIE;
+    #endif
             if(plane == address.plane && valid >= PLANE && address.valid >= PLANE)
             {
                 match = PLANE;
@@ -134,8 +145,10 @@ enum address_valid Address::compare(const Address &address) const
                     }
                 }
             }
+    #ifndef SINGLE_PLANE
         }
     }
+    #endif
     return match;
 }
 
@@ -197,8 +210,13 @@ Address &Address::operator=(const Address &rhs)
 {
     if(this == &rhs)
         return *this;
+    #ifndef SINGLE_PLANE
     package = rhs.package;
     die = rhs.die;
+    #else
+    package=0;
+    die=0;
+    #endif
     plane = rhs.plane;
     block = rhs.block;
     page = rhs.page;

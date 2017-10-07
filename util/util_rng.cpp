@@ -23,18 +23,20 @@
 
 #include "../util.h"
 
+std::mt19937 RandNrGen::rng(time(NULL));
+std::uniform_real_distribution<double> RandNrGen::dist;
 
 RandNrGen::RandNrGen(){
     uint32_t seedVal = time(NULL);
     rng.seed(seedVal);
 }
 
-RandNrGen& RandNrGen::getInstance()
+/*RandNrGen& RandNrGen::getInstance()
 {
     // Magic static!
     static RandNrGen instance;
     return instance;
-}
+}*/
 
 void RandNrGen::reset(uint32_t seed){
     rng.seed(seed);

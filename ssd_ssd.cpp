@@ -122,10 +122,10 @@ void Ssd::initialize(const ulong numUniqueLPNs)
     controller.initialize(numUniqueLPNs);
 }
 
-void Ssd::initialize(const std::set<ulong> &uniqueLPNs)
+/*void Ssd::initialize(const std::set<ulong> &uniqueLPNs)
 {
     controller.initialize(uniqueLPNs);
-}
+}*/
 
 
 Ssd::~Ssd(void)
@@ -198,11 +198,12 @@ double Ssd::event_arrive(enum event_type type, ulong logical_address, uint size,
 {
     assert(start_time >= 0.0);
 
-    ///@TODO THESE ASSUMPTIONS DO NOT HOLD FOR OUR TRACES
-    //if (VIRTUAL_PAGE_SIZE == 1)
-    //    assert((long long int) logical_address <= (long long int) SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE);
-    //else
-    //    assert((long long int) logical_address*VIRTUAL_PAGE_SIZE <= (long long int) SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE);
+    #ifdef DEBUG
+    if (VIRTUAL_PAGE_SIZE == 1)
+        assert((long long int) logical_address <= (long long int) SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE);
+    else
+        assert((long long int) logical_address*VIRTUAL_PAGE_SIZE <= (long long int) SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE);
+    #endif
 
     /* allocate the event and address dynamically so that the allocator can
      * handle efficiency issues for us */
@@ -214,7 +215,9 @@ double Ssd::event_arrive(enum event_type type, ulong logical_address, uint size,
         exit(MEM_ERR);
     }
 
+    #ifndef NO_EVT_PAYLOAD
     event->set_payload(buffer);
+    #endif
 
     if(controller.event_arrive(*event) != SUCCESS)
     {
@@ -226,24 +229,31 @@ double Ssd::event_arrive(enum event_type type, ulong logical_address, uint size,
     const Address &address = event->get_address();
     /// Handle the event
     if(type == READ){
+        #ifndef BYPASS_BUS
         if(bus.lock(address.package, start_time, BUS_CTRL_DELAY, *event) != SUCCESS){
             fprintf(stderr, "Ssd error: %s: locking bus channel %u for read command failed:\n", __func__, address.package);
         } else{
+        #endif
             if(data[address.package].read(*event) != SUCCESS)
                 fprintf(stderr, "Ssd error: %s: read request failed:\n", __func__);
+        #ifndef BYPASS_BUS
             else{
                 if(bus.lock(address.package, start_time, BUS_CTRL_DELAY + BUS_DATA_DELAY, *event) != SUCCESS)
                     fprintf(stderr, "Ssd error: %s: locking bus channel %u for read data failed:\n", __func__, address.package);
             }
         }
-
+        #endif
     } else if(type == WRITE){
+        #ifndef BYPASS_BUS
         if(bus.lock(address.package, start_time, BUS_CTRL_DELAY + BUS_DATA_DELAY, *event) != SUCCESS){
             fprintf(stderr, "Ssd error: %s: locking bus channel %u for write data failed:\n", __func__, address.package);
         } else{
+        #endif
             if(data[address.package].write(*event) != SUCCESS)
                 fprintf(stderr, "Ssd error: %s: write request failed:\n", __func__);
+        #ifndef BYPASS_BUS
         }
+        #endif
 
     } else
         fprintf(stderr, "Ssd error: %s: incoming request was not of type read or write\n", __func__);
@@ -254,6 +264,66 @@ double Ssd::event_arrive(enum event_type type, ulong logical_address, uint size,
     delete event;
     return start_time;
 }
+
+void Ssd::event_arrive(Event &event/*, void *buffer*/)
+{
+    assert(event->get_start_time() >= 0.0);
+
+    #ifdef DEBUG
+    if (VIRTUAL_PAGE_SIZE == 1)
+        assert((long long int) logical_address <= (long long int) SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE);
+    else
+        assert((long long int) logical_address*VIRTUAL_PAGE_SIZE <= (long long int) SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE);
+    #endif
+
+    ///@TODO Enable buffer
+    //#ifndef NO_EVT_PAYLOAD
+    //event.set_payload(buffer);
+    //#endif
+
+    if(controller.event_arrive(event) != SUCCESS)
+    {
+        fprintf(stderr, "Ssd error: %s: request failed:\n", __func__);
+        event.print(stderr);
+    }
+    assert(event.get_address().valid == PAGE);
+    /// Get the address determined by the FTL
+    const Address &address = event.get_address();
+    /// Handle the event
+    const event_type &type = event.get_event_type();
+    if(type == READ){
+        #ifndef BYPASS_BUS
+        if(bus.lock(address.package, start_time, BUS_CTRL_DELAY, event) != SUCCESS){
+            fprintf(stderr, "Ssd error: %s: locking bus channel %u for read command failed:\n", __func__, address.package);
+        } else{
+        #endif
+            if(data[address.package].read(event) != SUCCESS)
+                fprintf(stderr, "Ssd error: %s: read request failed:\n", __func__);
+        #ifndef BYPASS_BUS
+            else{
+                if(bus.lock(address.package, start_time, BUS_CTRL_DELAY + BUS_DATA_DELAY, event) != SUCCESS)
+                    fprintf(stderr, "Ssd error: %s: locking bus channel %u for read data failed:\n", __func__, address.package);
+            }
+        }
+        #endif
+    } else if(type == WRITE){
+        #ifndef BYPASS_BUS
+        if(bus.lock(address.package, start_time, BUS_CTRL_DELAY + BUS_DATA_DELAY, event) != SUCCESS){
+            fprintf(stderr, "Ssd error: %s: locking bus channel %u for write data failed:\n", __func__, address.package);
+        } else{
+        #endif
+            if(data[address.package].write(event) != SUCCESS)
+                fprintf(stderr, "Ssd error: %s: write request failed:\n", __func__);
+        #ifndef BYPASS_BUS
+        }
+        #endif
+
+    } else
+        fprintf(stderr, "Ssd error: %s: incoming request was not of type read or write\n", __func__);
+
+}
+
+
 
 /*
  * Returns a pointer to the global buffer of the Ssd.

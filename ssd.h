@@ -358,7 +358,18 @@ class HotColdID
 public:
     HotColdID() = default;
     virtual ~HotColdID() = default;
+    /**
+     * @brief Checks whether the HCID has marked this LPN as hot.
+     * @param lpn Logical Page Number
+     * @return True if the LPN is hot
+     */
     virtual bool is_hot(const ulong lpn) const = 0;
+    /**
+     * @brief Lets the HCID know there is a request for this LPN.
+     * @param lpn Logical Page Number
+     * @return True if the LPN is hot
+     */
+    ///@TODO Enable virtual bool request_lpn(const ulong lpn) = 0;
 };
 
 class Oracle_HCID : public HotColdID
@@ -367,7 +378,6 @@ public:
     Oracle_HCID(const std::set<ulong> &hotSet);
     virtual ~Oracle_HCID();
     bool is_hot(const ulong lpn) const;
-    ///@TODO void next_frame();
 private:
     std::set<ulong> hotSet;
 };
@@ -384,6 +394,30 @@ private:
     ulong numHotLPN;
     std::map<ulong, bool> hotMap;
 };
+
+class WARM_HCID : public HotColdID
+{
+public:
+    WARM_HCID(const uint maxHotQueueLength, const uint maxCooldownLength);
+    virtual ~WARM_HCID();
+
+    bool is_hot(const ulong lpn) const;
+    /**
+     * @brief Lets the HCID know there is a request for this lpn.
+     * @param lpn Logical Page Number
+     * @return True if the lpn is hot
+     */
+    //bool request_lpn(const ulong lpn);
+private:
+    uint maxNumHot;
+    uint maxNumCooldown;
+    std::deque<ulong> hotQueue;
+    std::deque<ulong> cooldownWindow;
+    std::set<ulong> hotSet;     //Redundancy to ignore LPNs not in hotQueue
+    std::set<ulong> cooldownSet;//Redundancy to ignore LPNs not in cooldownWindow
+
+};
+
 
 class Stats
 {
@@ -521,6 +555,8 @@ public:
     double incr_bus_wait_time(double time);
     double incr_time_taken(double time_incr);
     void print(FILE *stream = stdout);
+
+    void set_logical_address(const ulong newLPN);//ONLY use this if you MUST
 private:
     double start_time;
     double time_taken;
@@ -552,10 +588,13 @@ public:
     std::set<ulong> read_accessed_lpns() const;//Scales with numEvents, avoid calling this frequently
     std::set<ulong> read_hot_lpns() const;
     std::vector<Event> read_events_from_trace(const std::string &traceFile) const;
+    std::string write_event(const Event &e) const;
 private:
     Event read_event(const std::string &line) const;
     Event read_event_simple(const std::string &line) const;
     Event read_event_BIOtracer(const std::string &line) const;
+    std::string write_event_simple(const Event &e) const;
+    std::string write_event_BIOtracer(const Event &e) const;
     bool read_next_oracle();
 
 
@@ -866,6 +905,16 @@ private:
     uint d;
     ulong FIFOCounter;
     std::vector<ulong> choices;
+};
+
+class GCImpl_FIFO : public Garbage_collector
+{
+public:
+    GCImpl_FIFO(FtlParent *FTL, const Address startBlock = Address(0,0,0,0,0,PAGE));
+    ~GCImpl_FIFO();
+    void collect(Address &addr);
+private:
+    Address currentAddress;
 };
 
 class GCImpl_Greedy : public Garbage_collector
@@ -1217,8 +1266,8 @@ public:
     FtlImpl_DWF(Controller &controller, HotColdID *hcID);
     //FtlImpl_DWF(Controller &controller, const std::vector<Event> &events);
     ~FtlImpl_DWF();
-    void initialize(const ulong numUniqueLPN);
-    void initialize(const std::set<ulong> &uniqueLPNs);
+    void initialize(const ulong maxLPN);
+    //void initialize(const std::set<ulong> &uniqueLPNs);
     enum status read(Event &event);
     enum status write(Event &event);
     enum status trim(Event &event);
@@ -1236,7 +1285,7 @@ private:
     Address WFI;
     Block *WFEPtr; // Internal WF
     Address WFE;
-    std::map<ulong, Address> map;
+    std::vector<Address> map;
     //Static_HCID hcID;
     HotColdID *hcID;
     std::vector< std::vector< std::vector< std::vector<uint> > > > hotValidPages;
@@ -1247,8 +1296,8 @@ class FtlImpl_HCWF : public FtlParent
 public:
     FtlImpl_HCWF(Controller &controller, HotColdID *hcID);
     ~FtlImpl_HCWF();
-    virtual void initialize(const ulong numUniqueLPN);
-    void initialize(const std::set<ulong> &uniqueLPNs);
+    virtual void initialize(const ulong maxLPN);
+    //void initialize(const std::set<ulong> &uniqueLPNs);
     enum status read(Event &event);
     enum status write(Event &event);
     enum status trim(Event &event);
@@ -1264,7 +1313,8 @@ private:
     Address CWF;
     Block *HWFPtr; // Hot WF
     Address HWF;
-    std::map<ulong, Address> map;
+    //std::map<ulong, Address> map;
+    std::vector<Address> map;
     HotColdID *hcID;
     std::vector< std::vector< std::vector< std::vector<bool> > > > blockIsHot;
 };
@@ -1275,7 +1325,7 @@ public:
     FtlImpl_COLD(Controller &controller, HotColdID *hcID, const uint d = DCHOICES_D);
     ~FtlImpl_COLD();
     virtual void initialize(const ulong numUniqueLPN);
-    void initialize(const std::set<ulong> &uniqueLPNs);
+    //void initialize(const std::set<ulong> &uniqueLPNs);
     enum status read(Event &event);
     enum status write(Event &event);
     enum status trim(Event &event);
@@ -1378,9 +1428,10 @@ class Ssd
 public:
     Ssd (uint ssd_size = SSD_SIZE, HotColdID *hcID = nullptr);
     ~Ssd(void);
-    void initialize(const ulong numUniqueLPNs);
+    void initialize(const ulong maxLPN);
     ///@TODO Pass EventReader instead of set of LPNs...
-    void initialize(const std::set<ulong> &uniqueLPNs);
+    //void initialize(const std::set<ulong> &uniqueLPNs);
+    void event_arrive(Event &event);//Could bypass a lot, use with caution
     double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time);
     double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time, void *buffer);
     friend class Controller;

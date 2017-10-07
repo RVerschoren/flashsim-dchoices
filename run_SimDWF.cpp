@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 
     for(uint run = startrun; run < (startrun+nruns); run ++ )
     {
-        RandNrGen::getInstance().reset(932117 + run + startrun-1);
+        RandNrGen::reset(932117 + run + startrun-1);
         HotColdID *hcID = new Static_HCID(numLPN,HOT_FRACTION);
 
         Ssd ssd(SSD_SIZE, hcID);
@@ -70,9 +70,10 @@ int main(int argc, char *argv[])
         while(ctrl.stats.get_currentPE() > maxPE)
         {
 
-            const ulong lpn = (RandNrGen::getInstance().get() <= HOT_REQUEST_RATIO)?
-                                                RandNrGen::getInstance().get(maxHotLPN) : maxHotLPN+RandNrGen::getInstance().get(maxColdLPN);
-            ssd.event_arrive(WRITE, lpn, 1, (double) 1+(2500*i++));//Timings don't really matter for PE fairness/SSD endurance
+            const ulong lpn = (RandNrGen::get() <= HOT_REQUEST_RATIO)?
+                                                RandNrGen::get(maxHotLPN) : maxHotLPN+RandNrGen::get(maxColdLPN);
+            Event event(WRITE,lpn,1,(double)1+(2500*i++));//Timings don't really matter for PE fairness/SSD endurance
+            ssd.event_arrive(event);
         }
         ssd.write_statistics_csv(fileName, run);
         delete hcID;

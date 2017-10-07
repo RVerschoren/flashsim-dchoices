@@ -47,16 +47,16 @@ int main(int argc, char *argv[])
     sstr << "-rho" << std::setw(4) << std::setprecision(2) << std::atof(argv[3]);
     std::string fileName = sstr.str();
 
-    RandNrGen::getInstance().reset();
+    RandNrGen::reset();
     Ssd ssd;
     const Controller &ctrl = ssd.get_controller();
     uint i = 0;
     while(ctrl.stats.get_currentPE() <= maxPE)
     {
-        const ulong lpn = RandNrGen::getInstance().get(maxLPN);
+        const ulong lpn = RandNrGen::get(maxLPN);
         ssd.event_arrive(WRITE, lpn, 1, (double) 1+(5000*i++)); //Timings don't really matter for PE fairness/SSD endurance
     }
-    ssd.write_statistics_csv(fileName, 1);
+    //ssd.write_statistics_csv(fileName, 1);
 
     //std::cout << ctrl.stats.currentPE << std::endl;
     //while(ctrl.stats.get_currentPE() <= maxPE)

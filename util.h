@@ -34,33 +34,33 @@
 class RandNrGen final
 {
 public:
-    static RandNrGen& getInstance();
+//    static RandNrGen& getInstance();
 
     /**
      * @brief Resets the PRNG.
      * @param seed Optional seed to re-seed the PRNG with.
      */
-    void reset(uint32_t seed = time(NULL));
+    static void reset(uint32_t seed = time(NULL));
 
     /**
      * @brief Returns a double pseudorandom value in [0, 1).
      * @return A pseudorandom value in [0, 1)
      */
-    double get();
+    static double get();
 
     /**
      * @brief Returns an integer pseudorandom value in [0, S).
      * @param S Least upper bound of the possible returned values
      * @return An integer pseudorandom value in [0, S)
      */
-    unsigned long get(unsigned long S);
+    static unsigned long get(unsigned long S);
 
     /**
      * @brief Returns an integer pseudorandom value in [0, S).
      * @param S Least upper bound of the possible returned values
      * @return An integer pseudorandom value in [0, S)
      */
-    unsigned int get(unsigned int S);
+    static unsigned int get(unsigned int S);
 
 private:
     // Singleton
@@ -72,8 +72,8 @@ private:
     RandNrGen(RandNrGen&&) = delete;
     RandNrGen& operator=(RandNrGen&&) = delete;
 
-    std::mt19937 rng;
-    std::uniform_real_distribution<double> dist;
+    static std::mt19937 rng;
+    static std::uniform_real_distribution<double> dist;
 
 };
 

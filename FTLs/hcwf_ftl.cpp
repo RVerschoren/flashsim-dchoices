@@ -71,14 +71,16 @@ void FtlImpl_HCWF::initialize(const ulong numLPN)
         const bool lpnIsHot = hcID->is_hot(lpn);
         while(not success)
         {
-            addr.package = RandNrGen::getInstance().get(SSD_SIZE);
-            addr.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
-            addr.plane = RandNrGen::getInstance().get(DIE_SIZE);
+            #ifndef SINGLE_PLANE
+            addr.package = RandNrGen::get(SSD_SIZE);
+            addr.die = RandNrGen::get(PACKAGE_SIZE);
+            #endif
+            addr.plane = RandNrGen::get(DIE_SIZE);
             if(lpnIsHot)
             {
-                addr.block =  RandNrGen::getInstance().get(maxHotBlocks);
+                addr.block =  RandNrGen::get(maxHotBlocks);
             } else {
-                addr.block =  maxHotBlocks + RandNrGen::getInstance().get(numColdBlocks);
+                addr.block =  maxHotBlocks + RandNrGen::get(numColdBlocks);
             }
             assert(addr.check_valid() >= BLOCK);
 
@@ -89,7 +91,7 @@ void FtlImpl_HCWF::initialize(const ulong numLPN)
                 Event evt(WRITE, lpn, 1, 0);
                 evt.set_address(addr);
                 block->write(evt);
-                map[lpn] = addr;
+                map.push_back(addr);
                 success = true;
             }
         }
@@ -103,7 +105,7 @@ void FtlImpl_HCWF::initialize(const ulong numLPN)
     #endif
 }
 
-
+/*
 void FtlImpl_HCWF::initialize(const std::set<ulong> &uniqueLPNs)
 {
     // Just assume for now that we have PAGE validity, we'll check it later anyway
@@ -136,41 +138,40 @@ void FtlImpl_HCWF::initialize(const std::set<ulong> &uniqueLPNs)
     assert(numHotBlocks <= PLANE_SIZE);
 
     /// Initialize with events
-    ///@TODO Fix for(ulong it = 0; it < events.size(); it++)
     for(const ulong lpn : uniqueLPNs)
     {
         //const ulong lpn = events[it].get_logical_address();
         bool success = false;
         const bool lpnIsHot = hcID->is_hot(lpn);
         ///@TODO Fix const bool lpnIsHot = events[it].is_hot();
-        if(map.find(lpn) == map.end())
-        {
-            while(not success)
-            {
-                addr.package = RandNrGen::getInstance().get(SSD_SIZE);
-                addr.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
-                addr.plane = RandNrGen::getInstance().get(DIE_SIZE);
-                if(lpnIsHot)
-                {
-                    addr.block =  RandNrGen::getInstance().get(maxHotBlocks);
-                } else {
-                    addr.block =  maxHotBlocks + RandNrGen::getInstance().get(numColdBlocks);
-                }
-                assert(addr.check_valid() >= BLOCK);
 
-                Block * block = controller.get_block_pointer(addr);
+         while(not success)
+         {
+            #ifndef SINGLE_PLANE
+             addr.package = RandNrGen::get(SSD_SIZE);
+             addr.die = RandNrGen::.get(PACKAGE_SIZE);
+            #endif
+             addr.plane = RandNrGen::get(DIE_SIZE);
+             if(lpnIsHot)
+             {
+                 addr.block =  RandNrGen::get(maxHotBlocks);
+             } else {
+                 addr.block =  maxHotBlocks + RandNrGen::get(numColdBlocks);
+             }
+             assert(addr.check_valid() >= BLOCK);
 
-                if(block != HWFPtr and block != CWFPtr and block->get_next_page(addr) == SUCCESS){
-                    ///@TODO Should we avoid the controller? Perhaps, to not count the time taken for initializing the disk...
-                    Event evt(WRITE, lpn, 1, 0);
-                    evt.set_address(addr);
-                    block->write(evt);
-                    map[lpn] = addr;
-                    success = true;
-                }
-            }
-        }
-    }
+             Block * block = controller.get_block_pointer(addr);
+
+             if(block != HWFPtr and block != CWFPtr and block->get_next_page(addr) == SUCCESS){
+                 ///@TODO Should we avoid the controller? Perhaps, to not count the time taken for initializing the disk...
+                 Event evt(WRITE, lpn, 1, 0);
+                 evt.set_address(addr);
+                 block->write(evt);
+                 map[lpn] = addr;
+                 success = true;
+             }
+         }
+     }
     #ifdef CHECK_VALID_PAGES
     check_valid_pages(map.size());
     #endif
@@ -179,6 +180,7 @@ void FtlImpl_HCWF::initialize(const std::set<ulong> &uniqueLPNs)
     check_ftl_hotness_integrity();
     #endif
 }
+*/
 
 FtlImpl_HCWF::FtlImpl_HCWF(Controller &controller, HotColdID *hcID):
     FtlParent(controller), map(),  hcID(hcID), blockIsHot(SSD_SIZE,  std::vector<std::vector<std::vector<bool> > >(PACKAGE_SIZE, std::vector<std::vector<bool> >(DIE_SIZE, std::vector<bool>(PLANE_SIZE,false))))
@@ -195,7 +197,7 @@ enum status FtlImpl_HCWF::read(Event &event)
 {
     controller.stats.numFTLRead++;
     const uint lpn = event.get_logical_address();
-    if(map.find(lpn) != map.end()) event.set_address(map[lpn]);
+    event.set_address(map[lpn]);
 
     return SUCCESS;
 }
@@ -213,7 +215,7 @@ enum status FtlImpl_HCWF::write(Event &event)
     const ulong lpn = event.get_logical_address();
 
     ///Invalidate previous page
-    if(map.find(lpn) != map.end()) get_block_pointer(map[lpn])->invalidate_page(map[lpn].page);
+    get_block_pointer(map[lpn])->invalidate_page(map[lpn].page);
 
     const bool lpnIsHot = hcID->is_hot(lpn);
 
@@ -226,7 +228,7 @@ enum status FtlImpl_HCWF::write(Event &event)
         assert(HWFInitiated or CWFPtr->get_pages_empty() == 0);
 
         //Need to select a victim block through GC
-        Address  victim = (map.find(lpn) != map.end())?  map[lpn] : HWF;
+        Address  victim = map[lpn];
         Block *victimPtr;
         do {
             garbage->collect(victim);
@@ -374,7 +376,6 @@ void FtlImpl_HCWF::check_valid_pages(const ulong numLPN)
                     for(uint p = 0; p < BLOCK_SIZE; p++){
                         Address addr(package,die,plane,b,p,PAGE);
                         if(controller.get_page_pointer(addr)->get_state() == VALID){
-                            //std::cout << "\t" << p << " : " << controller.get_page_pointer(addr)->get_logical_address() << std::endl;
                             numPages++;
                         }
                     }
@@ -402,10 +403,10 @@ void FtlImpl_HCWF::check_block_hotness()
 
 void FtlImpl_HCWF::check_ftl_hotness_integrity()
 {
-    for(std::pair<ulong,Address> pair : map)
+    for(uint it = 0; it < map.size(); it++)
     {
-        const ulong lpn = pair.first;
-        const Address &addr = pair.second;
+        const ulong lpn = it;
+        const Address &addr = map[it];
         assert(blockIsHot[addr.package][addr.die][addr.plane][addr.block] == hcID->is_hot(lpn));
     }
 }

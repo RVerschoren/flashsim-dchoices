@@ -39,9 +39,11 @@ GCImpl_Random::~GCImpl_Random()
 
 void GCImpl_Random::collect(Address &addr)
 {
-    addr.package = RandNrGen::getInstance().get(SSD_SIZE);
-    addr.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
-    addr.plane = RandNrGen::getInstance().get(DIE_SIZE);
-    addr.block = RandNrGen::getInstance().get(PLANE_SIZE);
+    #ifndef SINGLE_PLANE
+    addr.package = RandNrGen::get(SSD_SIZE);
+    addr.die = RandNrGen::get(PACKAGE_SIZE);
+    #endif
+    addr.plane = RandNrGen::get(DIE_SIZE);
+    addr.block = RandNrGen::get(PLANE_SIZE);
     addr.valid = PAGE;//Make sure this is the case
 }

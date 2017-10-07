@@ -66,14 +66,16 @@ void FtlImpl_COLD::initialize(const ulong numLPN)
         const bool lpnIsHot = hcID->is_hot(lpn);
         while(not success)
         {
-            addr.package = RandNrGen::getInstance().get(SSD_SIZE);
-            addr.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
-            addr.plane = RandNrGen::getInstance().get(DIE_SIZE);
+            #ifndef SINGLE_PLANE
+            addr.package = RandNrGen::get(SSD_SIZE);
+            addr.die = RandNrGen::get(PACKAGE_SIZE);
+            #endif
+            addr.plane = RandNrGen::get(DIE_SIZE);
             if(lpnIsHot)
             {
-                addr.block =  RandNrGen::getInstance().get(maxHotBlocks);
+                addr.block =  RandNrGen::get(maxHotBlocks);
             } else {
-                addr.block =  maxHotBlocks + RandNrGen::getInstance().get(numColdBlocks);
+                addr.block =  maxHotBlocks + RandNrGen::get(numColdBlocks);
             }
             assert(addr.check_valid() >= BLOCK);
 
@@ -98,7 +100,7 @@ void FtlImpl_COLD::initialize(const ulong numLPN)
     #endif
 }
 
-
+/*
 void FtlImpl_COLD::initialize(const std::set<ulong> &uniqueLPNs)
 {
     // Just assume for now that we have PAGE validity, we'll check it later anyway
@@ -173,7 +175,7 @@ void FtlImpl_COLD::initialize(const std::set<ulong> &uniqueLPNs)
     check_block_hotness();
     check_ftl_hotness_integrity();
     #endif
-}
+}*/
 
 FtlImpl_COLD::FtlImpl_COLD(Controller &controller, HotColdID *hcID, const uint d):
     FtlParent(controller), map(),  hcID(hcID), blockIsHot(SSD_SIZE,  std::vector<std::vector<std::vector<bool> > >(PACKAGE_SIZE, std::vector<std::vector<bool> >(DIE_SIZE, std::vector<bool>(PLANE_SIZE,false)))), d(d), FIFOCounter(0)
@@ -211,10 +213,12 @@ void FtlImpl_COLD::gca_collect_COLD(Address &victimAddress, const bool replacing
             bool COLDvictim = false;
             for(uint i = 0; i < d; i++)
             {
-                address.package = RandNrGen::getInstance().get(SSD_SIZE);
-                address.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
-                address.plane = RandNrGen::getInstance().get(DIE_SIZE);
-                address.block = RandNrGen::getInstance().get(PLANE_SIZE);
+                #ifndef SINGLE_PLANE
+                address.package = RandNrGen::get(SSD_SIZE);
+                address.die = RandNrGen::get(PACKAGE_SIZE);
+                #endif
+                address.plane = RandNrGen::get(DIE_SIZE);
+                address.block = RandNrGen::get(PLANE_SIZE);
                 assert(address.check_valid() >= BLOCK);
 
                 const uint validPages = get_pages_valid(address);

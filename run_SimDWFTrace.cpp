@@ -51,7 +51,9 @@ int main(int argc, char *argv[])
 
     EventReader evtRdr(traceFile, numRequests, mode, create_oracle_filename(traceID, HOT_FRACTION, nrFrames));
     std::set<ulong> uniqueLPNs = evtRdr.read_accessed_lpns();
-    std::set<ulong> hotLPNs = evtRdr.read_hot_lpns();
+    //std::set<ulong> hotLPNs = evtRdr.read_hot_lpns();
+    const ulong maxLPN = *std::max_element(uniqueLPNs.begin(), uniqueLPNs.end());
+    assert(maxLPNs == (uniqueLPNs.size()-1) );
 
     PLANE_SIZE = std::ceil( (double) uniqueLPNs.size() / (double) (BLOCK_SIZE * (1.0-SPARE_FACTOR)) );
 
@@ -69,11 +71,13 @@ int main(int argc, char *argv[])
 
     for(uint run = startrun; run < (startrun+nruns); run ++ )
     {
-        RandNrGen::getInstance().reset();
-        HotColdID *hcID = new Oracle_HCID(hotLPNs);
+        RandNrGen::reset();
+        //HotColdID *hcID = new Oracle_HCID(hotLPNs);
+        HotColdID *hcID = new Static_HCID(maxLPN);
 
         Ssd ssd(SSD_SIZE, hcID);
-        ssd.initialize(uniqueLPNs);
+        //ssd.initialize(uniqueLPNs);
+        ssd.initialize(maxLPN);
 
         const Controller &ctrl = ssd.get_controller();
         uint it = 0;

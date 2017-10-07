@@ -39,17 +39,20 @@ void FtlImpl_SWF::initialize(const ulong numLPN)
     for(unsigned int lpn = 0; lpn < numLPN; lpn++){
 
         bool success = false;
-        while(not success){
-
-            addr.package = RandNrGen::getInstance().get(SSD_SIZE);
-            addr.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
-            addr.plane = RandNrGen::getInstance().get(DIE_SIZE);
-            addr.block = RandNrGen::getInstance().get(PLANE_SIZE);
+        while(not success)
+        {
+            #ifndef SINGLE_PLANE
+            addr.package = RandNrGen::get(SSD_SIZE);
+            addr.die = RandNrGen::get(PACKAGE_SIZE);
+            #endif
+            addr.plane = RandNrGen::get(DIE_SIZE);
+            addr.block = RandNrGen::get(PLANE_SIZE);
             assert(addr.check_valid() >= BLOCK);
 
             Block * block = controller.get_block_pointer(addr);
 
-            if(block != WFPtr and block->get_next_page(addr) == SUCCESS){
+            if(block != WFPtr and block->get_next_page(addr) == SUCCESS)
+            {
                 ///@TODO Should we avoid the controller? Perhaps, to not count the time taken for initializing the disk...
                 Event evt(WRITE, lpn, 1, 0);
                 evt.set_address(addr);
@@ -112,8 +115,6 @@ enum status FtlImpl_SWF::write(Event &event)
 
     ///Invalidate previous page
     Address phaddr = map[lpn];
-    ///@TODO This shouldn't be necessary FIX THIS
-    ///phaddr.valid = PAGE;//This shouldn't be necessary FIX THIS
     assert(phaddr.valid >= PAGE);
     controller.get_block_pointer(phaddr)->invalidate_page(phaddr.page);
     assert(controller.get_page_pointer(phaddr)->get_state() == INVALID);

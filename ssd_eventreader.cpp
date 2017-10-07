@@ -31,7 +31,7 @@
 using namespace ssd;
 
 EventReader::EventReader(const std::string traceFileName, const ulong numEvents, const EVENT_READER_MODE mode)
-    : traceFileName(traceFileName), currentEvent(0), numEvents(numEvents), readMode(mode), oracleFileName(oracleFileName), traceStream(traceFileName),  usingOracle(false)
+    : traceFileName(traceFileName), currentEvent(0), numEvents(numEvents), readMode(mode), oracleFileName(""), traceStream(traceFileName),  usingOracle(false)
 {
 }
 
@@ -100,6 +100,21 @@ Event EventReader::read_next_event()
     return evt;
 }
 
+std::string EventReader::write_event(const Event &e) const
+{
+    switch (readMode)
+    {
+        case EVTRDR_SIMPLE:
+            return write_event_simple(e);
+            break;
+        case EVTRDR_BIOTRACER:
+            return write_event_BIOtracer(e);
+            break;
+        default:
+            return write_event_simple(e);
+    }
+}
+
 Event EventReader::read_event(const std::string &line) const
 {
     switch (readMode)
@@ -126,6 +141,12 @@ Event EventReader::read_event_simple(const std::string &line) const
     const  event_type  type = (cell.empty() or std::stoi(cell) != 0)? WRITE : TRIM;
     ///@TODO Find a better solution than zero start times to determine the right start time
     return Event(type, startAddress, 1, 0.0);
+}
+
+std::string EventReader::write_event_simple(const Event &evt) const
+{
+    const std::string typeStr = (evt.get_event_type() == TRIM)? "0" : "1";
+    return (std::to_string(evt.get_logical_address()) +  "," + typeStr);
 }
 
 Event EventReader::read_event_BIOtracer(const std::string &line) const
@@ -158,6 +179,21 @@ Event EventReader::read_event_BIOtracer(const std::string &line) const
     const double startTime = cell.empty()? 0.0 : std::stod(cell);
 
     return Event(type, startAddress, numSectors, startTime);
+}
+
+std::string EventReader::write_event_BIOtracer(const Event &evt) const
+{
+    const std::string delim = "\t\t";
+    const std::string emptyCell = "0";
+    const std::string typeStr = (evt.get_event_type() == READ)? "0" : "1";
+    return (std::to_string(evt.get_logical_address()) +  delim +
+                std::to_string(evt.get_size()*8) + delim +
+                std::to_string(evt.get_size()*4096) + delim +
+                typeStr + delim +
+                emptyCell + delim +
+                emptyCell + delim +
+                std::to_string(evt.get_start_time())
+            );
 }
 
 std::set<ulong> EventReader::read_accessed_lpns() const

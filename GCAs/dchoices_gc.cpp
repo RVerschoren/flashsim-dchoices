@@ -48,10 +48,12 @@ void GCImpl_DChoices::collect(Address &victimAddress)
         uint minValidPages = BLOCK_SIZE + 1;
         for(uint i = 0; i < d; i++)
         {
-            address.package = RandNrGen::getInstance().get(SSD_SIZE);
-            address.die = RandNrGen::getInstance().get(PACKAGE_SIZE);
-            address.plane = RandNrGen::getInstance().get(DIE_SIZE);
-            address.block = RandNrGen::getInstance().get(PLANE_SIZE);
+            #ifndef SINGLE_PLANE
+            address.package = RandNrGen::get(SSD_SIZE);
+            address.die = RandNrGen::get(PACKAGE_SIZE);
+            #endif
+            address.plane = RandNrGen::get(DIE_SIZE);
+            address.block = RandNrGen::get(PLANE_SIZE);
             assert(address.check_valid() >= BLOCK);
 
             const uint validPages = ftl->get_pages_valid(address);

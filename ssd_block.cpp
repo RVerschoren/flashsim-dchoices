@@ -111,14 +111,22 @@ enum status Block::write(Event &event)
     assert(data != NULL);
     enum status ret = data[event.get_address().page]._write(event);
 
+    #ifndef NO_NOOP
     if(event.get_noop() == false)
     {
+    #endif
         pages_valid++;
+        #ifndef NO_BLOCK_STATE
         state = ACTIVE;
+        #endif
         modification_time = event.get_start_time();
 
+        #ifndef NOT_USE_BLOCKMGR
         if(FTL_USE_BLOCKMANAGER) Block_manager::instance()->update_block(this);
+        #endif
+    #ifndef NO_NOOP
     }
+    #endif
 
     return ret;
 }
@@ -182,7 +190,9 @@ enum status Block::_erase_and_copy(Event &event, Address &copyBlock, Block *copy
     min_seek_empty = 0;
     pages_valid = 0;
     pages_invalid = 0;
+    #ifndef NO_BLOCK_STATE
     state = FREE;
+    #endif
     for(i = 0; i < size; i++)
     {
         if(data[i].get_state() == VALID)
@@ -201,7 +211,10 @@ enum status Block::_erase_and_copy(Event &event, Address &copyBlock, Block *copy
             }else{
                 data[min_seek_empty]._write(event, data[i].get_logical_address());
                 pages_valid++;
+
+                #ifndef NO_BLOCK_STATE
                 state = ACTIVE;
+                #endif
 
                 if(i != min_seek_empty) data[i].set_state(EMPTY); //Could be we just copy page by page
 
@@ -292,8 +305,11 @@ void Block::invalidate_page(uint page)
     pages_invalid++;
     data[page].set_state(INVALID);
 
-    if(FTL_USE_BLOCKMANAGER) Block_manager::instance()->update_block(this);
+    #ifndef NOT_USE_BLOCKMGR
+    Block_manager::instance()->update_block(this);
+    #endif
 
+    #ifndef NO_BLOCK_STATE
     /* update block state */
     if(pages_invalid >= size)
         state = INACTIVE;
@@ -301,7 +317,7 @@ void Block::invalidate_page(uint page)
         state = ACTIVE;
     else
         state = FREE;
-
+    #endif
     return;
 }
 

@@ -575,6 +575,18 @@ private:
     bool hot;
 };
 
+struct IOEvent
+{
+    event_type type;
+    ulong lpn;
+    uint size;
+    IOEvent(const event_type type, const ulong lpn, const uint size)
+        : type(type), lpn(lpn), size(size)
+    {
+    }
+};
+
+
 enum EVENT_READER_MODE {EVTRDR_SIMPLE, EVTRDR_BIOTRACER};
 
 //ulong count_unique_lpns(const std::vector<Event> &events);
@@ -586,10 +598,15 @@ public:
     EventReader(const std::string traceFileName, const ulong numEvents, const EVENT_READER_MODE mode, const std::string oracleFileName);
     Event read_next_event();
     std::set<ulong> read_accessed_lpns() const;//Scales with numEvents, avoid calling this frequently
+    std::set<ulong> read_accessed_lpns(const std::vector<IOEvent> &events) const;
     std::set<ulong> read_hot_lpns() const;
+    std::vector<IOEvent> read_IO_events_from_trace(const std::string &traceFile) const;
     std::vector<Event> read_events_from_trace(const std::string &traceFile) const;
     std::string write_event(const Event &e) const;
 private:
+    IOEvent read_IO_event(const std::string &line) const;
+    IOEvent read_IO_event_simple(const std::string &line) const;
+    IOEvent read_IO_event_BIOtracer(const std::string &line) const;
     Event read_event(const std::string &line) const;
     Event read_event_simple(const std::string &line) const;
     Event read_event_BIOtracer(const std::string &line) const;

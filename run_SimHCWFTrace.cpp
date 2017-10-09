@@ -49,7 +49,8 @@ int main(int argc, char *argv[])
     //std::vector<Event> events = read_event_from_trace(traceFile, readEvtFunc);
     //const ulong numUniqueLPNs = count_unique_lpns(events);
     EventReader evtRdr(traceFile, numRequests, mode, create_oracle_filename(traceID, HOT_FRACTION, nrFrames));
-    std::set<ulong> uniqueLPNs = evtRdr.read_accessed_lpns();
+    std::vector<IOEvent> events = evtRdr.read_IO_events_from_trace(traceFile);
+    std::set<ulong> uniqueLPNs = evtRdr.read_accessed_lpns(events);
     //std::set<ulong> hotLPNs = evtRdr.read_hot_lpns();
     //std::cout << "UNIQUE LPNS: " << uniqueLPNs.size() << " OF WHICH HOT " << hotLPNs.size() << std::endl;
     const ulong maxLPN = *std::max_element(uniqueLPNs.begin(), uniqueLPNs.end());
@@ -86,10 +87,12 @@ int main(int argc, char *argv[])
         double startTime = 0.0;
         while(ctrl.stats.get_currentPE() > maxPE)
         {
-            const Event evt = evtRdr.read_next_event();
-            ssd.event_arrive(evt.get_event_type(), evt.get_logical_address(), evt.get_size(), startTime );//Timings don't really matter for PE fairness/SSD endurance
+            //const Event evt = evtRdr.read_next_event();
+            const IOEvent &evt = events[it];
+            ssd.event_arrive(evt.type, evt.lpn, evt.size, startTime);//Timings don't really matter for PE fairness/SSD endurance
+            //ssd.event_arrive(evt);//Timings don't really matter for PE fairness/SSD endurance
             it = (it + 1) % numRequests;
-            startTime += 5*((evt.get_event_type() == READ)? PAGE_READ_DELAY : PAGE_WRITE_DELAY);
+            startTime += 5*((evt.type == READ)? PAGE_READ_DELAY : PAGE_WRITE_DELAY);
         }
         ssd.write_statistics_csv(fileName, run);
         delete hcID;

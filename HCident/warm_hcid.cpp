@@ -38,7 +38,7 @@ bool WARM_HCID::is_hot(const ulong lpn) const
 {
     return hotSet.find(lpn) != hotSet.end();
 }
-
+/*
 bool WARM_HCID::request_lpn(const ulong lpn)
 {
     assert(hotSet.size() == hotQueue.size());
@@ -106,5 +106,5 @@ bool WARM_HCID::request_lpn(const ulong lpn)
     assert(hotQueue.size() >= 0);
     assert(cooldownWindow.size() >= 0);
     return lpnIsHot;
-}
+}*/
 

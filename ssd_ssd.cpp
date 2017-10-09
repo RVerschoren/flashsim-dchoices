@@ -229,19 +229,21 @@ double Ssd::event_arrive(enum event_type type, ulong logical_address, uint size,
     const Address &address = event->get_address();
     /// Handle the event
     if(type == READ){
-        #ifndef BYPASS_BUS
-        if(bus.lock(address.package, start_time, BUS_CTRL_DELAY, *event) != SUCCESS){
-            fprintf(stderr, "Ssd error: %s: locking bus channel %u for read command failed:\n", __func__, address.package);
-        } else{
-        #endif
-            if(data[address.package].read(*event) != SUCCESS)
-                fprintf(stderr, "Ssd error: %s: read request failed:\n", __func__);
-        #ifndef BYPASS_BUS
-            else{
-                if(bus.lock(address.package, start_time, BUS_CTRL_DELAY + BUS_DATA_DELAY, *event) != SUCCESS)
-                    fprintf(stderr, "Ssd error: %s: locking bus channel %u for read data failed:\n", __func__, address.package);
+        #ifndef NO_PHYSICAL_READ_EVENTS
+            #ifndef BYPASS_BUS
+            if(bus.lock(address.package, start_time, BUS_CTRL_DELAY, *event) != SUCCESS){
+                fprintf(stderr, "Ssd error: %s: locking bus channel %u for read command failed:\n", __func__, address.package);
+            } else{
+            #endif
+                if(data[address.package].read(*event) != SUCCESS)
+                    fprintf(stderr, "Ssd error: %s: read request failed:\n", __func__);
+            #ifndef BYPASS_BUS
+                else{
+                    if(bus.lock(address.package, start_time, BUS_CTRL_DELAY + BUS_DATA_DELAY, *event) != SUCCESS)
+                        fprintf(stderr, "Ssd error: %s: locking bus channel %u for read data failed:\n", __func__, address.package);
+                }
             }
-        }
+            #endif
         #endif
     } else if(type == WRITE){
         #ifndef BYPASS_BUS
@@ -292,6 +294,7 @@ void Ssd::event_arrive(Event &event/*, void *buffer*/)
     /// Handle the event
     const event_type &type = event.get_event_type();
     if(type == READ){
+        #ifndef NO_PHYSICAL_READ_EVENTS
         #ifndef BYPASS_BUS
         if(bus.lock(address.package, start_time, BUS_CTRL_DELAY, event) != SUCCESS){
             fprintf(stderr, "Ssd error: %s: locking bus channel %u for read command failed:\n", __func__, address.package);
@@ -305,6 +308,7 @@ void Ssd::event_arrive(Event &event/*, void *buffer*/)
                     fprintf(stderr, "Ssd error: %s: locking bus channel %u for read data failed:\n", __func__, address.package);
             }
         }
+        #endif
         #endif
     } else if(type == WRITE){
         #ifndef BYPASS_BUS

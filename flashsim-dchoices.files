@@ -14,6 +14,7 @@ run_SimHCWF.cpp
 run_SimHCWFTrace.cpp
 run_SimSWF.cpp
 run_test_dwf.cpp
+ssd_eventreader.cpp
 verification.cpp
 COPYING
 FTLs/bast_ftl.cpp

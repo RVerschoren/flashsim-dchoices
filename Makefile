@@ -9,6 +9,7 @@ SOURCES_SSDLIB = $(filter-out ssd_ftl.cpp, $(wildcard ssd_*.cpp))  \
                  $(wildcard FTLs/*.cpp)                            \
                  $(wildcard HCident/*.cpp)                         \
                  $(wildcard GCAs/*.cpp)                            \
+                 $(wildcard WLvl/*.cpp)                            \
                  $(wildcard util/*.cpp)                            \
                  SSDSim.cpp
 OBJECTS_SSDLIB=$(patsubst %.cpp,%.o,$(SOURCES_SSDLIB))

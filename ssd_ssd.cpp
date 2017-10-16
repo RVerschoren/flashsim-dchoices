@@ -269,7 +269,7 @@ double Ssd::event_arrive(enum event_type type, ulong logical_address, uint size,
 
 void Ssd::event_arrive(Event &event/*, void *buffer*/)
 {
-    assert(event->get_start_time() >= 0.0);
+    assert(event.get_start_time() >= 0.0);
 
     #ifdef DEBUG
     if (VIRTUAL_PAGE_SIZE == 1)

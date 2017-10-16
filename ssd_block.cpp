@@ -389,3 +389,14 @@ void Block::set_block_type(block_type value)
 {
     this->btype = value;
 }
+
+void Block::set_hotness(const bool isHot)
+{
+    this->isHot = isHot;
+}
+
+bool Block::get_hotness() const
+{
+    return this->isHot;
+}
+

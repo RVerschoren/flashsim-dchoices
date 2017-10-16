@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
     std::set<ulong> uniqueLPNs = evtRdr.read_accessed_lpns();
     //std::set<ulong> hotLPNs = evtRdr.read_hot_lpns();
     const ulong maxLPN = *std::max_element(uniqueLPNs.begin(), uniqueLPNs.end());
-    assert(maxLPNs == (uniqueLPNs.size()-1) );
+    assert(maxLPN == (uniqueLPNs.size()-1) );
 
     PLANE_SIZE = std::ceil( (double) uniqueLPNs.size() / (double) (BLOCK_SIZE * (1.0-SPARE_FACTOR)) );
 
@@ -62,7 +62,6 @@ int main(int argc, char *argv[])
     sstr << "-b" << std::setw(2) << BLOCK_SIZE;
     sstr << "-d" << std::setw(3) << DCHOICES_D;
     sstr << "-sf" << std::setw(4) << std::setprecision(2) << SPARE_FACTOR;
-    sstr << "-r" << std::setw(5) << std::setprecision(3) << HOT_REQUEST_RATIO;
     sstr << "-f" << std::setw(5) << std::setprecision(3) << HOT_FRACTION;
     sstr << "-" << traceID;
     std::string fileName = sstr.str();

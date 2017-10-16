@@ -262,12 +262,17 @@ enum block_type {LOG, DATA, LOG_SEQ};
 /*
  * Enumeration of the different FTL implementations.
  */
-enum ftl_implementation {IMPL_PAGE, IMPL_BAST, IMPL_FAST, IMPL_DFTL, IMPL_BIMODAL, IMPL_SWF, IMPL_DWF, IMPL_HCWF};
+enum ftl_implementation {IMPL_PAGE, IMPL_BAST, IMPL_FAST, IMPL_DFTL, IMPL_BIMODAL, IMPL_SWF, IMPL_DWF, IMPL_HCWF, IMPL_COLD};
 
 /*
  * Enumeration of the different GC algorithms.
  */
-enum gc_algorithm {RANDOM, GREEDY, DCHOICES};
+enum gc_algorithm {FIFO,GREEDY, RANDOM, DCHOICES};
+
+/*
+ * Enumeration of the different wear leveling schemes.
+ */
+enum wl_scheme {WL_NONE, WL_BAN, WL_SWITCH, WL_HCSWITCH};
 
 /*
  * Enumeration of the different hot/cold identification techniques
@@ -294,12 +299,13 @@ class Block;
 class Plane;
 class Die;
 class Package;
-class Garbage_Collector;
-//class GCParent;
+class Garbage_collector;
 class GCImpl_Random;
 class GCImpl_DChoices;
 class GCImpl_Greedy;
-class Wear_Leveler;
+class Wear_leveler;
+class WLvlImpl_Ban;
+class WLvlImpl_HCSwitch;
 class Block_manager;
 class FtlParent;
 class FtlImpl_Page;
@@ -747,6 +753,8 @@ public:
     Block *get_pointer(void);
     block_type get_block_type(void) const;
     void set_block_type(block_type value);
+    void set_hotness(const bool isHot);
+    bool get_hotness() const;
 private:
     uint size;
     Page * const data;
@@ -759,7 +767,8 @@ private:
     double modification_time;
 
     uint min_seek_empty;
-    std::map<ulong,uint> block_map;
+    //std::map<ulong,uint> block_map;
+    bool isHot;
 
     block_type btype;
 };
@@ -948,10 +957,50 @@ public:
 class Wear_leveler
 {
 public:
-    Wear_leveler(FtlParent &FTL);
-    ~Wear_leveler(void);
+    Wear_leveler(FtlParent *FTL);
+    virtual ~Wear_leveler(void);
+    virtual enum status insert(const Address &address) = 0;
+protected:
+    FtlParent *FTL;
+};
+
+class WLvlImpl_Ban : public Wear_leveler
+{
+public:
+    WLvlImpl_Ban(FtlParent *FTL, const ulong tau);
+    ~WLvlImpl_Ban();
+    enum status insert(const Address &address);
+private:
+    ulong tau;
+};
+
+class WLvlImpl_BanProb : public Wear_leveler
+{
+public:
+    WLvlImpl_BanProb(FtlParent *FTL, const double p);
+    ~WLvlImpl_BanProb();
+    enum status insert(const Address &address);
+private:
+    double p;
+};
+
+class WLvlImpl_BlockSwitch : public Wear_leveler
+{
+public:
+    WLvlImpl_BlockSwitch(FtlParent *FTL);
+    ~WLvlImpl_BlockSwitch();
     enum status insert(const Address &address);
 };
+
+class WLvlImpl_HCSwitch : public Wear_leveler
+{
+public:
+    WLvlImpl_HCSwitch(FtlParent *FTL);
+    ~WLvlImpl_HCSwitch();
+    enum status insert(const Address &address);
+};
+
+
 
 class Block_manager
 {
@@ -1057,6 +1106,11 @@ public:
     virtual void print_ftl_statistics();
 
     friend class Block_manager;
+    friend class Wear_leveler;
+    friend class WLvlImpl_Ban;
+    friend class WLvlImpl_BanProb;
+    friend class WLvlImpl_BlockSwitch;
+    friend class WLvlImpl_HCSwitch;
 
     uint get_pages_valid(const Address &address) const;
     uint get_pages_invalid(const Address &address) const;

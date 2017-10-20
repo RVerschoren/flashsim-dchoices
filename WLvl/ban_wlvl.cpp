@@ -44,11 +44,11 @@ enum status WLvlImpl_Ban::insert(const Address &address)
     const ulong numErases = FTL->controller.stats.numGCErase;
     if(numErases % tau == 0)
     {
-        //#ifndef SINGLE_PLANE
-        //Address addr(RandNrGen::get(SSD_SIZE), RandNrGen::get(PACKAGE_SIZE), RandNrGen::get(DIE_SIZE), RandNrGen::get(PLANE_SIZE), 0, PAGE);
-        //#else
-        //Address addr(address.package, address.die, RandNrGen::get(DIE_SIZE), RandNrGen::get(PLANE_SIZE), 0, PAGE);
-        //#endif
+        #ifndef SINGLE_PLANE
+        Address addr(RandNrGen::get(SSD_SIZE), RandNrGen::get(PACKAGE_SIZE), RandNrGen::get(DIE_SIZE), RandNrGen::get(PLANE_SIZE), 0, PAGE);
+        #else
+        Address addr(address.package, address.die, RandNrGen::get(DIE_SIZE), RandNrGen::get(PLANE_SIZE), 0, PAGE);
+        #endif
     }
 
     return SUCCESS;

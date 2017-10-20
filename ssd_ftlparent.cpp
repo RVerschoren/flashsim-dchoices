@@ -51,7 +51,12 @@ FtlParent::FtlParent(Controller &controller) : controller(controller), garbage(n
         garbage = new GCImpl_Random(this);
         break;
     case 3:
-        garbage = new GCImpl_DChoices(this);
+        if(DCHOICES_D == 0)
+        {
+            garbage = new GCImpl_FIFO(this);
+        }else{
+            garbage = new GCImpl_DChoices(this);
+        }
         break;
     default:
         garbage = new GCImpl_Random(this);

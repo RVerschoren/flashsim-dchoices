@@ -72,8 +72,7 @@ int main(int argc, char *argv[])
 
             const ulong lpn = (RandNrGen::get() <= HOT_REQUEST_RATIO)?
                                                 RandNrGen::get(maxHotLPN) : maxHotLPN+RandNrGen::get(maxColdLPN);
-            Event event(WRITE,lpn,1,(double)1+(2500*i++));//Timings don't really matter for PE fairness/SSD endurance
-            ssd.event_arrive(event);
+            ssd.event_arrive(WRITE, lpn, 1, (double)1+(2500*i++));//Timings don't really matter for PE fairness/SSD endurance
         }
         ssd.write_statistics_csv(fileName, run);
         delete hcID;

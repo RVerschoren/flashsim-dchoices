@@ -261,8 +261,9 @@ enum status FtlImpl_COLD::write(Event &event)
 
     const bool lpnIsHot = hcID->is_hot(lpn);
 
-    while( (lpnIsHot and HWFPtr->get_next_page(HWF) != SUCCESS)
-           or (not lpnIsHot and CWFPtr->get_next_page(CWF) != SUCCESS) )//Still space in WF
+    while(HWFPtr->get_next_page(HWF) != SUCCESS or CWFPtr->get_next_page(CWF) != SUCCESS
+          //(lpnIsHot and HWFPtr->get_next_page(HWF) != SUCCESS) or (not lpnIsHot and CWFPtr->get_next_page(CWF) != SUCCESS)
+          )//Still space in WF
     {
         const bool HWFInitiated = HWFPtr->get_next_page(HWF) != SUCCESS; // HWF initiated cleaning cycle
 

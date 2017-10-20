@@ -1502,7 +1502,6 @@ public:
     void initialize(const ulong maxLPN);
     ///@TODO Pass EventReader instead of set of LPNs...
     //void initialize(const std::set<ulong> &uniqueLPNs);
-    void event_arrive(Event &event);//Could bypass a lot, use with caution
     double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time);
     double event_arrive(enum event_type type, ulong logical_address, uint size, double start_time, void *buffer);
     friend class Controller;

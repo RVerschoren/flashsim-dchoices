@@ -610,12 +610,12 @@ public:
     std::vector<Event> read_events_from_trace(const std::string &traceFile) const;
     std::string write_event(const Event &e) const;
 private:
-    IOEvent read_IO_event(const std::string &line) const;
-    IOEvent read_IO_event_simple(const std::string &line) const;
-    IOEvent read_IO_event_BIOtracer(const std::string &line) const;
-    Event read_event(const std::string &line) const;
-    Event read_event_simple(const std::string &line) const;
-    Event read_event_BIOtracer(const std::string &line) const;
+    void read_IO_event(const std::string &line, std::vector<IOEvent> &events) const;
+    void read_IO_event_simple(const std::string &line, std::vector<IOEvent> &events) const;
+    void read_IO_event_BIOtracer(const std::string &line, std::vector<IOEvent> &events) const;
+    void read_event(const std::string &line, std::vector<Event> &events) const;
+    void read_event_simple(const std::string &line, std::vector<Event> &events) const;
+    void read_event_BIOtracer(const std::string &line, std::vector<Event> &events) const;
     std::string write_event_simple(const Event &e) const;
     std::string write_event_BIOtracer(const Event &e) const;
     bool read_next_oracle();

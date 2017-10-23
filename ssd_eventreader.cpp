@@ -73,7 +73,7 @@ std::vector<Event> EventReader::read_events_from_trace(const std::string &filena
     std::vector<Event> events;
     while(std::getline(data,line))
     {
-        events.push_back(read_event(line));
+        read_event(line,events);
     }
     return events;
 }
@@ -85,7 +85,7 @@ std::vector<IOEvent> EventReader::read_IO_events_from_trace(const std::string &f
     std::vector<IOEvent> events;
     while(std::getline(data,line))
     {
-        events.push_back(read_IO_event(line));
+        read_IO_event(line, events);
     }
     return events;
 }
@@ -111,27 +111,28 @@ Event EventReader::read_next_event()
     }
     std::string line;
     std::getline(traceStream, line);
-    Event evt = read_event(line);
-    if(usingOracle) evt.set_hot(read_next_oracle());
-    return evt;
+    std::vector<Event> events;
+    read_event(line,events);
+    if(usingOracle) events[0].set_hot(read_next_oracle());
+    return events[0];
 }
 
-IOEvent EventReader::read_IO_event(const std::string &line) const
+void EventReader::read_IO_event(const std::string &line, std::vector<IOEvent> &events) const
 {
     switch (readMode)
     {
         case EVTRDR_SIMPLE:
-            return read_IO_event_simple(line);
+            return read_IO_event_simple(line,events);
             break;
         case EVTRDR_BIOTRACER:
-            return read_IO_event_BIOtracer(line);
+            return read_IO_event_BIOtracer(line,events);
             break;
         default:
-            return read_IO_event_simple(line);
+            return read_IO_event_simple(line,events);
     }
 }
 
-IOEvent EventReader::read_IO_event_simple(const std::string &line) const
+void EventReader::read_IO_event_simple(const std::string &line, std::vector<IOEvent> &events) const
 {
     const char delim = ',';
     std::stringstream  lineStream(line);
@@ -140,29 +141,36 @@ IOEvent EventReader::read_IO_event_simple(const std::string &line) const
     const unsigned long startAddress = cell.empty()? 0UL : std::stoul(cell);
     std::getline(lineStream,cell,delim);
     const  event_type  type = (cell.empty() or std::stoi(cell) != 0)? WRITE : TRIM;
-    return IOEvent(type, startAddress, 1);
+    events.push_back(IOEvent(type, startAddress, 1));
 }
 
-IOEvent EventReader::read_IO_event_BIOtracer(const std::string &line) const
+void EventReader::read_IO_event_BIOtracer(const std::string &line, std::vector<IOEvent> &events) const
 {
     const char delim = '\t';
     std::stringstream  lineStream(line);
     std::string        cell;
 
     std::getline(lineStream,cell,delim);
-    const unsigned long startAddress = cell.empty()? 0UL : std::stoul(cell);
+    unsigned long startAddress = cell.empty()? 0UL : std::stoul(cell);
     //Need to getline twice because fields are delimited by 2 tabs instead of only 1...
     std::getline(lineStream,cell,delim);
     std::getline(lineStream,cell,delim);
     //const unsigned long numSectors = cell.empty()? 1UL : (std::stoul(cell)/8+1);
     std::getline(lineStream,cell,delim);
     std::getline(lineStream,cell,delim);
-    const unsigned long numSectors = cell.empty()? 1UL : (std::stoul(cell)/4096+1);//in bytes
+    //const unsigned long numSectors = cell.empty()? 1UL : (std::stoul(cell)/4096+1);//in bytes
+    long numBytes = cell.empty()? 4095L : std::stol(cell);//in bytes
     std::getline(lineStream,cell,delim);
     std::getline(lineStream,cell,delim);
     const unsigned int value = cell.empty()? 0UL : std::stoul(cell);
     const event_type type = value % 2 == 0? READ : WRITE;
-    return IOEvent(type, startAddress, numSectors);
+    do
+    {
+        events.push_back(IOEvent(type, startAddress,1));
+        startAddress++;
+        numBytes = numBytes - 4096;
+    }while(numBytes > 0);
+    //return IOEvent(type, startAddress, numSectors);
 }
 
 std::string EventReader::write_event(const Event &e) const
@@ -180,22 +188,22 @@ std::string EventReader::write_event(const Event &e) const
     }
 }
 
-Event EventReader::read_event(const std::string &line) const
+void EventReader::read_event(const std::string &line, std::vector<Event> &events) const
 {
     switch (readMode)
     {
         case EVTRDR_SIMPLE:
-            return read_event_simple(line);
+            return read_event_simple(line, events);
             break;
         case EVTRDR_BIOTRACER:
-            return read_event_BIOtracer(line);
+            return read_event_BIOtracer(line, events);
             break;
         default:
-            return read_event_simple(line);
+            return read_event_simple(line, events);
     }
 }
 
-Event EventReader::read_event_simple(const std::string &line) const
+void EventReader::read_event_simple(const std::string &line, std::vector<Event> &events) const
 {
     const char delim = ',';
     std::stringstream  lineStream(line);
@@ -205,7 +213,8 @@ Event EventReader::read_event_simple(const std::string &line) const
     std::getline(lineStream,cell,delim);
     const  event_type  type = (cell.empty() or std::stoi(cell) != 0)? WRITE : TRIM;
     ///@TODO Find a better solution than zero start times to determine the right start time
-    return Event(type, startAddress, 1, 0.0);
+    //return Event(type, startAddress, 1, 0.0);
+    events.push_back(Event(type,startAddress,1,0.0));
 }
 
 std::string EventReader::write_event_simple(const Event &evt) const
@@ -214,21 +223,22 @@ std::string EventReader::write_event_simple(const Event &evt) const
     return (std::to_string(evt.get_logical_address()) +  "," + typeStr);
 }
 
-Event EventReader::read_event_BIOtracer(const std::string &line) const
+void EventReader::read_event_BIOtracer(const std::string &line, std::vector<Event> &events) const
 {
     const char delim = '\t';
     std::stringstream  lineStream(line);
     std::string        cell;
 
     std::getline(lineStream,cell,delim);
-    const unsigned long startAddress = cell.empty()? 0UL : std::stoul(cell);
+    unsigned long startAddress = cell.empty()? 0UL : std::stoul(cell);
     //Need to getline twice because fields are delimited by 2 tabs instead of only 1...
     std::getline(lineStream,cell,delim);
     std::getline(lineStream,cell,delim);
     //const unsigned long numSectors = cell.empty()? 1UL : (std::stoul(cell)/8+1);
     std::getline(lineStream,cell,delim);
     std::getline(lineStream,cell,delim);
-    const unsigned long numSectors = cell.empty()? 1UL : (std::stoul(cell)/4096+1);//in bytes
+    //const unsigned long numSectors = cell.empty()? 1UL : (std::stoul(cell)/4096+1);//in bytes
+    long numBytes = cell.empty()? 4096L : std::stol(cell);//in bytes
     std::getline(lineStream,cell,delim);
     std::getline(lineStream,cell,delim);
     const unsigned int value = cell.empty()? 0UL : std::stoul(cell);
@@ -242,8 +252,13 @@ Event EventReader::read_event_BIOtracer(const std::string &line) const
     std::getline(lineStream,cell,delim);
     std::getline(lineStream,cell,delim);
     const double startTime = cell.empty()? 0.0 : std::stod(cell);
-
-    return Event(type, startAddress, numSectors, startTime);
+    do
+    {
+        events.push_back(Event(type, startAddress,1, startTime));
+        startAddress++;
+        numBytes = numBytes - 4096;
+    }while(numBytes > 0);
+    //return Event(type, startAddress, numSectors, startTime);
 }
 
 std::string EventReader::write_event_BIOtracer(const Event &evt) const
@@ -267,9 +282,10 @@ std::set<ulong> EventReader::read_accessed_lpns() const
     /// Keep this separate from currentEvent/traceStream
     std::ifstream data(traceFileName);
     std::string line;
+    std::vector<Event> event;
     while(std::getline(data, line))
     {
-        uniqueLPNs.insert(read_event(line).get_logical_address());
+        uniqueLPNs.insert(event[event.size()-1].get_logical_address());
     }
     return uniqueLPNs;
 }
@@ -295,12 +311,14 @@ std::set<ulong> EventReader::read_hot_lpns() const
     std::string line;
     std::string oracleLine;
     std::string cell;
+    std::vector<Event> events;
     while(std::getline(data, line))
     {
         std::getline(oracleData, oracleLine);
         std::stringstream  lineStream(oracleLine);
         std::getline(lineStream, cell, ',');
-        if(std::stoi(cell) != 0) hotLPNs.insert(read_event(line).get_logical_address());
+        read_event(line,events);
+        if(std::stoi(cell) != 0) hotLPNs.insert(events[events.size()-1].get_logical_address());
     }
     return hotLPNs;
 }

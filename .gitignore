@@ -229,3 +229,7 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+/.codelite
+/results
+/results-21-08-2018
+/results-01-2018

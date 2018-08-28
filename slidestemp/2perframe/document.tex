@@ -1,0 +1,328 @@
+\documentclass[10pt,a4paper]{beamer}
+\usepackage[latin1]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{subcaption} % Not in original template
+\usepackage{grffile}
+\begin{document}
+	
+	
+%	\begin{frame}{Rosenblum DWF $f=0.01,\, r=1-f$}
+%	\begin{figure}
+%		\begin{subfigure}{.48\textwidth}
+%			\centering
+%			\includegraphics[width=.99\linewidth]{dwfban-b32-sf0.10-f0.010-r0.990-end.pdf}
+%		\end{subfigure}
+%		\begin{subfigure}{.48\textwidth}
+%			\centering
+%			\includegraphics[width=.99\linewidth]{dwfban-b32-sf0.10-f0.010-r0.990-fair.pdf}
+%		\end{subfigure}
+%	\end{figure}
+%\end{frame}
+%	\begin{frame}{Rosenblum HCWF $f=0.01,\, r=1-f$}
+%\begin{figure}
+%	\begin{subfigure}{.40\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{hcwfban-b32-sf0.10-f0.010-r0.990-end.pdf}
+%	\end{subfigure}
+%	\begin{subfigure}{.40\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{hcwfban-b32-sf0.10-f0.010-r0.990-fair.pdf}
+%	\end{subfigure}
+%	\begin{subfigure}{.40\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{hcwfban-b32-sf0.10-f0.010-r0.990-colderase.pdf}
+%	\end{subfigure}
+%\end{figure}
+%\end{frame}
+%\begin{frame}{Rosenblum DWF $f=0.01,\, r=1-f$}
+%\begin{figure}
+%	\begin{subfigure}{.48\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{dwfmaxval-b32-sf0.10-f0.010-r0.990-end.pdf}
+%	\end{subfigure}
+%	\begin{subfigure}{.48\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{dwfmaxval-b32-sf0.10-f0.010-r0.990-fair.pdf}
+%	\end{subfigure}
+%\end{figure}
+%\end{frame}
+%\begin{frame}{Rosenblum HCWF $f=0.01,\, r=1-f$}
+%\begin{figure}
+%	\begin{subfigure}{.40\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{hcwfmaxval-b32-sf0.10-f0.010-r0.990-end.pdf}
+%	\end{subfigure}
+%	\begin{subfigure}{.40\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{hcwfmaxval-b32-sf0.10-f0.010-r0.990-fair.pdf}
+%	\end{subfigure}
+%\begin{subfigure}{.40\textwidth}
+%	\centering
+%	\includegraphics[width=.99\linewidth]{hcwfmaxval-b32-sf0.10-f0.010-r0.990-colderase.pdf}
+%\end{subfigure}
+%\end{figure}
+%\end{frame}
+%\begin{frame}{Rosenblum DWF $f=0.1,\, r=1-f$}
+%	\begin{figure}
+%	\begin{subfigure}{.48\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{dwfban-b32-sf0.10-f0.100-r0.900-end.pdf}
+%	\end{subfigure}
+%	\begin{subfigure}{.48\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{dwfban-b32-sf0.10-f0.100-r0.900-fair.pdf}
+%	\end{subfigure}
+%\end{figure}
+%\end{frame}
+%\begin{frame}{Rosenblum HCWF}
+%\begin{figure}
+%	\begin{subfigure}{.40\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{hcwfban-b32-sf0.10-f0.100-r0.900-end.pdf}
+%	\end{subfigure}
+%	\begin{subfigure}{.40\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{hcwfban-b32-sf0.10-f0.100-r0.900-fair.pdf}
+%	\end{subfigure}
+%	\begin{subfigure}{.40\textwidth}
+%	\centering
+%	\includegraphics[width=.99\linewidth]{hcwfban-b32-sf0.10-f0.100-r0.900-colderase.pdf}
+%\end{subfigure}
+%\end{figure}
+%\end{frame}
+%\begin{frame}{Rosenblum DWF $f=0.1,\, r=1-f$}
+%\begin{figure}
+%	\begin{subfigure}{.48\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{dwfmaxval-b32-sf0.10-f0.100-r0.900-end.pdf}
+%	\end{subfigure}
+%	\begin{subfigure}{.48\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{dwfmaxval-b32-sf0.10-f0.100-r0.900-fair.pdf}
+%	\end{subfigure}
+%\end{figure}
+%\end{frame}
+%\begin{frame}{Rosenblum HCWF $f=0.1,\, r=1-f$}
+%\begin{figure}
+%	\begin{subfigure}{.40\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{hcwfmaxval-b32-sf0.10-f0.100-r0.900-end.pdf}
+%	\end{subfigure}
+%	\begin{subfigure}{.40\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{hcwfmaxval-b32-sf0.10-f0.100-r0.900-fair.pdf}
+%	\end{subfigure}
+%\begin{subfigure}{.40\textwidth}
+%	\centering
+%	\includegraphics[width=.99\linewidth]{hcwfmaxval-b32-sf0.10-f0.100-r0.900-colderase.pdf}
+%\end{subfigure}
+%\end{figure}
+%\end{frame}
+%\begin{frame}{Rosenblum DWF $f=0.2,\, r=1-f$}
+%	\begin{figure}
+%		\begin{subfigure}{.48\textwidth}
+%			\centering
+%			\includegraphics[width=.99\linewidth]{dwfban-b32-sf0.10-f0.200-r0.800-end.pdf}
+%		\end{subfigure}
+%		\begin{subfigure}{.48\textwidth}
+%			\centering
+%			\includegraphics[width=.99\linewidth]{dwfban-b32-sf0.10-f0.200-r0.800-fair.pdf}
+%		\end{subfigure}
+%	\end{figure}
+%\end{frame}
+%\begin{frame}{Rosenblum HCWF $f=0.2,\, r=1-f$}
+%\begin{figure}
+%	\begin{subfigure}{.40\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{hcwfban-b32-sf0.10-f0.200-r0.800-end.pdf}
+%	\end{subfigure}
+%	\begin{subfigure}{.40\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{hcwfban-b32-sf0.10-f0.200-r0.800-fair.pdf}
+%	\end{subfigure}
+%	\begin{subfigure}{.40\textwidth}
+%	\centering
+%	\includegraphics[width=.99\linewidth]{hcwfban-b32-sf0.10-f0.200-r0.800-colderase.pdf}
+%\end{subfigure}
+%\end{figure}
+%\end{frame}
+%\begin{frame}{Rosenblum DWF $f=0.2,\, r=1-f$}
+%\begin{figure}
+%	\begin{subfigure}{.48\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{dwfmaxval-b32-sf0.10-f0.200-r0.800-end.pdf}
+%	\end{subfigure}
+%	\begin{subfigure}{.48\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{dwfmaxval-b32-sf0.10-f0.200-r0.800-fair.pdf}
+%	\end{subfigure}
+%\end{figure}
+%\end{frame}
+%\begin{frame}{Rosenblum HCWF $f=0.2,\, r=1-f$}
+%\begin{figure}
+%	\begin{subfigure}{.40\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{hcwfmaxval-b32-sf0.10-f0.200-r0.800-end.pdf}
+%	\end{subfigure}
+%	\begin{subfigure}{.40\textwidth}
+%		\centering
+%		\includegraphics[width=.99\linewidth]{hcwfmaxval-b32-sf0.10-f0.200-r0.800-fair.pdf}
+%	\end{subfigure}
+%\begin{subfigure}{.40\textwidth}
+%	\centering
+%	\includegraphics[width=.99\linewidth]{hcwfmaxval-b32-sf0.10-f0.200-r0.800-colderase.pdf}
+%\end{subfigure}
+%\end{figure}
+%\end{frame}
+
+
+
+
+\begin{frame}{Booting DWF Ban $f=0.01,\, S_f=0.1$}
+	\begin{figure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{dwftraceban-b32-sf0.10-f0.010-Boot-end.pdf}
+		\end{subfigure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{dwftraceban-b32-sf0.10-f0.010-Boot-fair.pdf}
+		\end{subfigure}
+	\end{figure}
+\end{frame}
+\begin{frame}{Booting HCWF Ban $f=0.01,\, S_f=0.1$}
+	\begin{figure}
+	\begin{subfigure}{.48\textwidth}
+		\centering
+		\includegraphics[width=.99\linewidth]{hcwftraceban-b32-sf0.10-f0.010-Boot-end.pdf}
+	\end{subfigure}
+	\begin{subfigure}{.48\textwidth}
+		\centering
+		\includegraphics[width=.99\linewidth]{hcwftraceban-b32-sf0.10-f0.010-Boot-fair.pdf}
+	\end{subfigure}
+	\end{figure}
+\end{frame}
+\begin{frame}{Movie DWF Ban $f=0.01,\, S_f=0.1$}
+	\begin{figure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{dwftraceban-b32-sf0.10-f0.010-Movi-end.pdf}
+		\end{subfigure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{dwftraceban-b32-sf0.10-f0.010-Movi-fair.pdf}
+		\end{subfigure}
+	\end{figure}
+\end{frame}
+\begin{frame}{Movie HCWF Ban $f=0.01,\, S_f=0.1$}	
+	\begin{figure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{hcwftraceban-b32-sf0.10-f0.010-Movi-end.pdf}
+		\end{subfigure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{hcwftraceban-b32-sf0.10-f0.010-Movi-fair.pdf}
+		\end{subfigure}
+	\end{figure}
+\end{frame}
+
+%\begin{frame}{Booting DWF $f=0.01,\, S_f=0.1$}
+%	\begin{figure}
+%		\begin{subfigure}{.48\textwidth}
+%			\centering
+%			\includegraphics[width=.99\linewidth]{dwftraceswap-b32-sf0.10-f0.010-Boot-end.pdf}
+%		\end{subfigure}
+%		\begin{subfigure}{.48\textwidth}
+%			\centering
+%			\includegraphics[width=.99\linewidth]{dwftraceswap-b32-sf0.10-f0.010-Boot-fair.pdf}
+%		\end{subfigure}
+%	\end{figure}
+%\end{frame}
+
+
+%\begin{frame}{Booting HCWF Swap $f=0.01,\, S_f=0.1$}
+%	\begin{figure}
+%		\begin{subfigure}{.48\textwidth}
+%			\centering
+%			\includegraphics[width=.99\linewidth]{hcwftraceswap-b32-sf0.10-f0.010-Boot-end.pdf}
+%		\end{subfigure}
+%		\begin{subfigure}{.48\textwidth}
+%			\centering
+%			\includegraphics[width=.99\linewidth]{hcwftraceswap-b32-sf0.10-f0.010-Boot-fair.pdf}
+%		\end{subfigure}
+%	\end{figure}
+%\end{frame}
+
+
+\begin{frame}{Movie DWF Swap $f=0.01,\, S_f=0.1$}
+	\begin{figure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{dwftraceswap-b32-sf0.10-f0.010-Movi-end.pdf}
+		\end{subfigure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{dwftraceswap-b32-sf0.10-f0.010-Movi-fair.pdf}
+		\end{subfigure}
+	\end{figure}
+\end{frame}
+\begin{frame}{Movie HCWF Swap $f=0.01,\, S_f=0.1$}
+	\begin{figure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{hcwftraceswap-b32-sf0.10-f0.010-Movi-end.pdf}
+		\end{subfigure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{hcwftraceswap-b32-sf0.10-f0.010-Movi-fair.pdf}
+		\end{subfigure}
+	\end{figure}
+\end{frame}
+
+
+\begin{frame}{Booting HCWF Hot/Cold swap $f=0.01,\, S_f=0.1$}
+	\begin{figure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{hcwftracehcswp-b32-sf0.10-f0.010-Boot-end.pdf}
+		\end{subfigure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{hcwftracehcswp-b32-sf0.10-f0.010-Boot-fair.pdf}
+		\end{subfigure}
+	\end{figure}
+\end{frame}
+\begin{frame}{Movie HCWF Hot/Cold swap $f=0.01,\, S_f=0.1$}
+	\begin{figure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{hcwftracehcswp-b32-sf0.10-f0.010-Movi-end.pdf}
+		\end{subfigure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{hcwftracehcswp-b32-sf0.10-f0.010-Movi-fair.pdf}
+		\end{subfigure}
+	\end{figure}
+\end{frame}
+
+
+\begin{frame}{Movie DWF Maximum valid $f=0.01,\, S_f=0.1$}
+	\begin{figure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{dwftracemaxval-b32-sf0.10-f0.010-Movi-end.pdf}
+		\end{subfigure}
+		\begin{subfigure}{.48\textwidth}
+			\centering
+			\includegraphics[width=.99\linewidth]{dwftracemaxval-b32-sf0.10-f0.010-Movi-fair.pdf}
+		\end{subfigure}
+	\end{figure}
+	Soortgelijk voor max valid bij HCWF en/of Boot trace
+\end{frame}
+
+
+\end{document}

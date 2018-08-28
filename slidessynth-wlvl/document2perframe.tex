@@ -1,0 +1,255 @@
+\documentclass[8pt,a4paper]{beamer}
+	\usepackage[latin1]{inputenc}
+	\usepackage{amsmath}
+	\usepackage{amsfonts}
+	\usepackage{amssymb}
+	\usepackage{graphicx}
+	\usepackage{subcaption} % Not in original template
+	\usepackage{grffile}
+	\begin{document}
+		
+		%% DWF vs HCWF
+		
+		%\begin{frame}{Ban DWF vs HCWF $f=0.2,\, r=1-f,\,S_f=0.1$ ($d=10,\, 30$)}
+		%	\begin{figure}
+		%		\begin{subfigure}{.48\textwidth}
+		%			\centering
+		%			\includegraphics[width=.99\linewidth]{../results/dwfbanvshcwfban-b32-d10-sf0.10-f0.200-r0.800-end.pdf}
+		%		\end{subfigure}
+		%		\begin{subfigure}{.48\textwidth}
+		%			\centering
+		%			\includegraphics[width=.99\linewidth]{../results/dwfbanvshcwfban-b32-d10-sf0.10-f0.200-r0.800-fair.pdf}
+		%		\end{subfigure}
+		%	\end{figure}
+		%	
+		%	\begin{figure}
+		%		\begin{subfigure}{.48\textwidth}
+		%			\centering
+		%			\includegraphics[width=.99\linewidth]{../results/dwfbanvshcwfban-b32-d30-sf0.10-f0.200-r0.800-end.pdf}
+		%		\end{subfigure}
+		%		\begin{subfigure}{.48\textwidth}
+		%			\centering
+		%			\includegraphics[width=.99\linewidth]{../results/dwfbanvshcwfban-b32-d30-sf0.10-f0.200-r0.800-fair.pdf}
+		%		\end{subfigure}
+		%	\end{figure}
+		%\end{frame}
+	
+		\begin{frame}{Ban DWF vs HCWF $f=0.1,\, r=1-f,\,S_f=0.1$ ($d=10,\, 30$)}
+			\begin{figure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/dwfbanvshcwfban-b32-d10-sf0.10-f0.100-r0.900-end.pdf}
+				\end{subfigure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/dwfbanvshcwfban-b32-d10-sf0.10-f0.100-r0.900-fair.pdf}
+				\end{subfigure}
+			\end{figure}
+			
+			\begin{figure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/dwfbanvshcwfban-b32-d30-sf0.10-f0.100-r0.900-end.pdf}
+				\end{subfigure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/dwfbanvshcwfban-b32-d30-sf0.10-f0.100-r0.900-fair.pdf}
+				\end{subfigure}
+			\end{figure}
+		\end{frame}
+	
+		\begin{frame}{Ban DWF vs HCWF $f=0.01,\, r=1-f,\,S_f=0.1$ ($d=10,\, 30$)}
+			\begin{figure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/dwfbanvshcwfban-b32-d10-sf0.10-f0.010-r0.990-end.pdf}
+				\end{subfigure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/dwfbanvshcwfban-b32-d10-sf0.10-f0.010-r0.990-fair.pdf}
+				\end{subfigure}
+			\end{figure}
+			
+			\begin{figure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/dwfbanvshcwfban-b32-d30-sf0.10-f0.010-r0.990-end.pdf}
+				\end{subfigure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/dwfbanvshcwfban-b32-d30-sf0.10-f0.010-r0.990-fair.pdf}
+				\end{subfigure}
+			\end{figure}
+		\end{frame}
+	
+		%% HCWF vs COLD (BAN)
+		
+		%\begin{frame}{Ban HCWF vs COLD $f=0.2,\, r=1-f,\,S_f=0.1$  ($d=10,\, 30$)}
+	%		\begin{figure}
+	%			\begin{subfigure}{.48\textwidth}
+	%				\centering
+	%				\includegraphics[width=.99\linewidth]{../results/hcwfbanvscoldban-b32-d10-sf0.10-f0.200-r0.800-end.pdf}
+	%			\end{subfigure}
+	%			\begin{subfigure}{.48\textwidth}
+	%				\centering
+	%				\includegraphics[width=.99\linewidth]{../results/hcwfbanvscoldban-b32-d10-sf0.10-f0.200-r0.800-fair.pdf}
+	%			\end{subfigure}
+	%		\end{figure}
+	%		
+	%		\begin{figure}
+	%			\begin{subfigure}{.48\textwidth}
+	%				\centering
+	%				\includegraphics[width=.99\linewidth]{../results/hcwfbanvscoldban-b32-d30-sf0.10-f0.200-r0.800-end.pdf}
+	%			\end{subfigure}
+	%			\begin{subfigure}{.48\textwidth}
+	%				\centering
+	%				\includegraphics[width=.99\linewidth]{../results/hcwfbanvscoldban-b32-d30-sf0.10-f0.200-r0.800-fair.pdf}
+	%			\end{subfigure}
+	%		\end{figure}
+		%\end{frame}
+	
+		\begin{frame}{Ban HCWF vs COLD $f=0.1,\, r=1-f,\,S_f=0.1$  ($d=10,\, 30$)}
+			\begin{figure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfbanvscoldban-b32-d10-sf0.10-f0.100-r0.900-end.pdf}
+				\end{subfigure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfbanvscoldban-b32-d10-sf0.10-f0.100-r0.900-fair.pdf}
+				\end{subfigure}
+			\end{figure}
+			
+			\begin{figure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfbanvscoldban-b32-d30-sf0.10-f0.100-r0.900-end.pdf}
+				\end{subfigure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfbanvscoldban-b32-d30-sf0.10-f0.100-r0.900-fair.pdf}
+				\end{subfigure}
+			\end{figure}
+		\end{frame}
+	
+		\begin{frame}{Ban HCWF vs COLD $f=0.01,\, r=1-f,\,S_f=0.1$  ($d=10,\, 30$)}
+			\begin{figure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfbanvscoldban-b32-d10-sf0.10-f0.010-r0.990-end.pdf}
+				\end{subfigure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfbanvscoldban-b32-d10-sf0.10-f0.010-r0.990-fair.pdf}
+				\end{subfigure}
+			\end{figure}
+			
+			\begin{figure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfbanvscoldban-b32-d30-sf0.10-f0.010-r0.990-end.pdf}
+				\end{subfigure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfbanvscoldban-b32-d30-sf0.10-f0.010-r0.990-fair.pdf}
+				\end{subfigure}
+			\end{figure}
+		\end{frame}
+		
+	
+		%% HCWF vs COLD (HCSWAP)
+		
+		%\begin{frame}{HCSwap HCWF vs COLD $f=0.2,\, r=1-f,\,S_f=0.1$  ($d=10,\, 30$)}
+		%	\begin{figure}
+		%		\begin{subfigure}{.48\textwidth}
+		%			\centering
+		%			\includegraphics[width=.99\linewidth]{../results/hcwfhcswpvscoldhcswp-b32-d10-sf0.10-f0.200-r0.800-end.pdf}
+		%		\end{subfigure}
+		%		\begin{subfigure}{.48\textwidth}
+		%			\centering
+		%			\includegraphics[width=.99\linewidth]{../results/hcwfhcswpvscoldhcswp-b32-d10-sf0.10-f0.200-r0.800-fair.pdf}
+		%		\end{subfigure}
+		%	\end{figure}
+		%	
+		%	\begin{figure}
+		%		\begin{subfigure}{.48\textwidth}
+		%			\centering
+		%			\includegraphics[width=.99\linewidth]{../results/hcwfhcswpvscoldhcswp-b32-d30-sf0.10-f0.200-r0.800-end.pdf}
+		%		\end{subfigure}
+		%		\begin{subfigure}{.48\textwidth}
+		%			\centering
+		%			\includegraphics[width=.99\linewidth]{../results/hcwfhcswpvscoldhcswp-b32-d30-sf0.10-f0.200-r0.800-fair.pdf}
+		%		\end{subfigure}
+		%	\end{figure}
+		%\end{frame}
+	
+		\begin{frame}{HCSwap HCWF vs COLD $f=0.1,\, r=1-f,\,S_f=0.1$  ($d=10,\, 30$)}
+			\begin{figure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfhcswpvscoldhcswp-b32-d10-sf0.10-f0.100-r0.900-end.pdf}
+				\end{subfigure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfhcswpvscoldhcswp-b32-d10-sf0.10-f0.100-r0.900-fair.pdf}
+				\end{subfigure}
+			\end{figure}
+			
+			\begin{figure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfhcswpvscoldhcswp-b32-d30-sf0.10-f0.100-r0.900-end.pdf}
+				\end{subfigure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfhcswpvscoldhcswp-b32-d30-sf0.10-f0.100-r0.900-fair.pdf}
+				\end{subfigure}
+			\end{figure}
+		\end{frame}
+	
+		\begin{frame}{HCSwap HCWF vs COLD $f=0.01,\, r=1-f,\,S_f=0.1$  ($d=10,\, 30$)}
+			\begin{figure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfhcswpvscoldhcswp-b32-d10-sf0.10-f0.010-r0.990-end.pdf}
+				\end{subfigure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfhcswpvscoldhcswp-b32-d10-sf0.10-f0.010-r0.990-fair.pdf}
+				\end{subfigure}
+			\end{figure}
+	
+			\begin{figure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfhcswpvscoldhcswp-b32-d30-sf0.10-f0.010-r0.990-end.pdf}
+				\end{subfigure}
+				\begin{subfigure}{.48\textwidth}
+					\centering
+					\includegraphics[width=.99\linewidth]{../results/hcwfhcswpvscoldhcswp-b32-d30-sf0.10-f0.010-r0.990-fair.pdf}
+				\end{subfigure}
+			\end{figure}
+		\end{frame}
+	
+	
+	
+	
+	
+		
+	%\begin{frame}{HCWF ODE vs Sim (d=10, $\rho=0.9$, $f=0.01$, $r=1-f$, stopcrit$=10^{-7}$)}
+	%	\begin{tabular}{c c c c c c c}
+	%		$p$  &  ODE Ban   &  Sim Ban  & ODE HCSwap & Sim HCSwap\\ \hline
+	%		0.500 & 2.6749 & 2.6747 $\pm$ 3.7502e-04 & 1.0312 & 30.3508 $\pm$ 0.0038\\
+	%		0.100 & 1.6887 & 1.6886 $\pm$ 1.5274e-04 & 1.0311 & 7.3071 $\pm$ 7.4514e-04\\
+	%		0.050 & 1.6143 & 1.6143 $\pm$ 1.1983e-04 & 1.0306 & 4.4271 $\pm$ 4.1192e-04\\
+	%		0.010 & 1.5594 & 1.5594 $\pm$ 1.2309e-04 & 1.0421 & 2.1224 $\pm$ 1.2707e-04\\
+	%		0.005 & 1.5528 & 1.5529 $\pm$ 1.0076e-04 &  & \\
+	%		0.001 & 1.5476 & 1.5475 $\pm$ 1.4934e-04 &  & \\
+	%		0.100 & 1.1382 & 1.1380 $\pm$ 3.5464e-05 & (d=100) &\\
+	%		0.010 & 1.1470 & 1.1415 $\pm$ 6.9863e-05 & (d=100)&\\
+	%		0.001 & 1.1516 & 1.1453 $\pm$ 4.3205e-05 & (d=100)&\\
+	%		 \hline
+	%	\end{tabular} 
+	%\end{frame}
+	
+	\end{document}

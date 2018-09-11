@@ -175,6 +175,11 @@ uint WEAR_LEVELER = 0;
 ulong WLVL_BAN_TAU = 100;
 
 /*
+ * Amount of choices D (for use Ban's algorithm)
+ */
+uint WLVL_BAN_D = 1;
+
+/*
  * Probability to trigger Ban wear leveling at GC.
  */
 double WLVL_ACTIVATION_PROBABILITY = 0.01;
@@ -281,6 +286,8 @@ load_entry(char* name, double value, uint line_number)
 		WEAR_LEVELER = (uint)value;
 	else if (!strcmp(name, "WLVL_BAN_TAU"))
 		WLVL_BAN_TAU = (ulong)value;
+    else if (!strcmp(name, "WLVL_BAN_D"))
+        WLVL_BAN_D = (uint)value;
 	else if (!strcmp(name, "WLVL_BAN_P"))
 		WLVL_ACTIVATION_PROBABILITY = value;
 	else

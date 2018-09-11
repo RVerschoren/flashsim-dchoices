@@ -98,7 +98,7 @@ FtlImpl_SWF::write(Event& event) {
 	const ulong lpn = event.get_logical_address();
 
     /// Invalidate previous page
-    get_block(map[lpn])->invalidate_page(map[lpn].page);
+    get_block(map[lpn])->invalidate_page(map[lpn].page, event.get_start_time() + event.get_time_taken());
     assert(controller.get_page_pointer(map[lpn])->get_state() == INVALID);
 
     while (get_next_page(WF) != SUCCESS) // Still space in WF
@@ -142,8 +142,7 @@ FtlImpl_SWF::trim(Event& event) {
 	/// TODO Implement
 	const ulong lpn = event.get_logical_address();
 	event.set_address(map[lpn]);
-	get_block(map[lpn])->invalidate_page(
-	    map[lpn].page); // Should we do this here?
+    get_block(map[lpn])->invalidate_page(map[lpn].page, event.get_start_time() + event.get_time_taken()); // Should we do this here?
 	return SUCCESS;
 }
 

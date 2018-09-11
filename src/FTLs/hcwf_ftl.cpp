@@ -127,7 +127,7 @@ FtlImpl_HCWF::write(Event& event) {
 	const ulong lpn = event.get_logical_address();
 
 	/// Invalidate previous page
-	get_block(map[lpn])->invalidate_page(map[lpn].page);
+    get_block(map[lpn])->invalidate_page(map[lpn].page, event.get_start_time() + event.get_time_taken());
 
 	const bool lpnIsHot = hcID->is_hot(lpn);
 

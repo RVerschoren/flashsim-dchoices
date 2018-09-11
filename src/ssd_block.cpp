@@ -143,7 +143,7 @@ Block::write(Event& event) {
 
 enum status
 Block::replace(Event& event) {
-	invalidate_page(event.get_replace_address().page);
+    invalidate_page(event.get_replace_address().page, event.get_start_time() + event.get_time_taken() );
 	return SUCCESS;
 }
 
@@ -411,7 +411,12 @@ Block::get_state(const Address& address) const {
 double
 Block::get_last_erase_time(void) const
 {
-	return last_erase_time;
+    return last_erase_time;
+}
+
+double Block::get_last_page_invalidate_time(void) const
+{
+    return last_page_invalidate_time;
 }
 
 ssd::ulong
@@ -433,7 +438,7 @@ Block::get_size(void) const
 }
 
 void
-Block::invalidate_page(uint page)
+Block::invalidate_page(uint page, const double time)
 {
 	assert(page < size);
 
@@ -444,6 +449,7 @@ Block::invalidate_page(uint page)
 		pages_valid--;
 	pages_invalid++;
 	data[page].set_state(INVALID);
+    last_page_invalidate_time = time;
 
 #ifndef NOT_USE_BLOCKMGR
 	Block_manager::instance()->update_block(this);
@@ -461,11 +467,12 @@ Block::invalidate_page(uint page)
 	return;
 }
 
-double
-Block::get_modification_time(void) const
-{
-	return modification_time;
-}
+///@TODO Remove
+///double
+///Block::get_modification_time(void) const
+///{
+///	return modification_time;
+///}
 
 /* method to find the next usable (empty) page in this block
  * method is called by write and erase methods and in Plane::get_next_page() */

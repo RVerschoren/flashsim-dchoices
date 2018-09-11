@@ -256,7 +256,7 @@ Plane::_merge(Event& event) {
 				    __func__, read.block, write.block);
 				i++;
 			}
-			data[read.block].invalidate_page(read.page);
+            data[read.block].invalidate_page(read.page, read_event.get_start_time() + read_event.get_time_taken());
 
 			/* get time taken for read and plane register write
 			 * read event time will accumulate and be added at end */

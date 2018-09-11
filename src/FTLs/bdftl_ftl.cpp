@@ -268,7 +268,7 @@ FtlImpl_BDftl::trim(Event& event) {
 		Address address = Address(
 		    block_map[dlbn].pbn + event.get_logical_address() % BLOCK_SIZE, PAGE);
 		Block* block = controller.get_block(address);
-		block->invalidate_page(address.page);
+        block->invalidate_page(address.page, event.get_start_time() + event.get_time_taken());
 
 		if (block->get_state() ==
 		        INACTIVE) { // All pages invalid, force an erase. PTRIM style.
@@ -284,7 +284,7 @@ FtlImpl_BDftl::trim(Event& event) {
 		if (current.ppn != -1) {
 			Address address = Address(current.ppn, PAGE);
 			Block* block = controller.get_block(address);
-			block->invalidate_page(address.page);
+            block->invalidate_page(address.page, event.get_start_time() + event.get_time_taken());
 
 			evict_specific_page_from_cache(event, dlpn);
 

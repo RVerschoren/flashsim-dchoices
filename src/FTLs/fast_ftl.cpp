@@ -210,8 +210,8 @@ FtlImpl_Fast::trim(Event& event) {
 			if (currentBlock->aPages[i] == (long)event.get_logical_address()) {
 				Address address =
 				Address(currentBlock->address.get_linear_address() + i, PAGE);
-				Block* block = controller.get_block(address);
-				block->invalidate_page(address.page);
+                Block* block = controller.get_block(address);
+                block->invalidate_page(address.page, event.get_start_time() + event.get_time_taken());
 
 				currentBlock->aPages[i] = -1;
 
@@ -238,7 +238,7 @@ FtlImpl_Fast::trim(Event& event) {
 			Address address = Address(
 			                      sequential_address.get_linear_address() + lbnOffset, PAGE);
 			Block* block = controller.get_block(address);
-			block->invalidate_page(address.page);
+            block->invalidate_page(address.page, event.get_start_time() + event.get_time_taken());
 
 			if (block->get_state() ==
 			        INACTIVE) { // All pages invalid, force an erase. PTRIM style.
@@ -251,7 +251,7 @@ FtlImpl_Fast::trim(Event& event) {
 			Address address = Address(data_list[lookupBlock] + lbnOffset, PAGE);
 
 			Block* block = controller.get_block(address);
-			block->invalidate_page(address.page);
+            block->invalidate_page(address.page, event.get_start_time() + event.get_time_taken());
 
 			if (block->get_state() ==
 			        INACTIVE) { // All pages invalid, force an erase. PTRIM style.

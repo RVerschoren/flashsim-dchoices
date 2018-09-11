@@ -321,7 +321,7 @@ FtlImpl_DWF::write(Event& event) {
 	const bool pageWasValid = get_state(prevAddress) == VALID;
 
 	if (pageWasValid)
-		get_block(prevAddress)->invalidate_page(prevAddress.page);
+        get_block(prevAddress)->invalidate_page(prevAddress.page, event.get_start_time() + event.get_time_taken());
 /// TODO if (pageWasValid and hcID->is_hot(lpn)) {
 /// TODO hotpages
 ///}

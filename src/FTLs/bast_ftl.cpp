@@ -226,7 +226,7 @@ FtlImpl_Bast::trim(Event& event) {
 		                        logBlock->pages[eventAddress.page],
 		                        PAGE);
 		Block* lBlock = controller.get_block(returnAddress);
-		lBlock->invalidate_page(returnAddress.page);
+        lBlock->invalidate_page(returnAddress.page, event.get_start_time() + event.get_time_taken());
 
 		logBlock->pages[eventAddress.page] = -1; // Reset the mapping
 
@@ -244,7 +244,7 @@ FtlImpl_Bast::trim(Event& event) {
 		                          data_list[lookupBlock] + event.get_logical_address() % BLOCK_SIZE,
 		                          PAGE);
 		Block* dBlock = controller.get_block(dataAddress);
-		dBlock->invalidate_page(dataAddress.page);
+        dBlock->invalidate_page(dataAddress.page, event.get_start_time() + event.get_time_taken());
 
 		if (dBlock->get_state() ==
 		        INACTIVE) { // All pages invalid, force an erase. PTRIM style.

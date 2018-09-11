@@ -110,7 +110,7 @@ FtlImpl_Dftl::trim(Event& event) {
 	{
 		Address address = Address(current.ppn, PAGE);
 		Block* block = controller.get_block(address);
-		block->invalidate_page(address.page);
+        block->invalidate_page(address.page, event.get_start_time() + event.get_time_taken());
 
 		evict_specific_page_from_cache(event, dlpn);
 

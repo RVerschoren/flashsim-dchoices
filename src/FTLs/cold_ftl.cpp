@@ -125,8 +125,7 @@ FtlImpl_COLD::gca_collect_COLD(const Event& event, Address& victimAddress,
                                const bool replacingCWF,
                                const std::vector<Address>& doNotPick)
 {
-    if (replacingCWF and d > 0) // If replacing CWF, pick a cold block (limits
-		// hot->cold conversions)
+    if (replacingCWF) // If replacing CWF, pick a cold block (limits hot->cold conversions)
 	{
         // Lower priority for hot blocks
         std::function<uint(const Address&)> costFunc =
@@ -138,10 +137,8 @@ FtlImpl_COLD::gca_collect_COLD(const Event& event, Address& victimAddress,
         [this, &doNotPick](const Address& addr) {
             return block_is_in_vector(addr, doNotPick);
         };
-        //std::cout << "DCH" << std::endl;
         d_choices_block(d, victimAddress, costFunc, ignorePred);
     } else {
-        //std::cout << "COLLECT" << std::endl;
 		garbage->collect(event, victimAddress, doNotPick);
 	}
 }
@@ -164,7 +161,7 @@ FtlImpl_COLD::write(Event& event) {
     //    this->gca_collect_COLD(event, victim, not HWFInitiated, currentWF);
     //}
     /// Invalidate previous page
-    get_block(map[lpn])->invalidate_page(map[lpn].page);
+    get_block(map[lpn])->invalidate_page(map[lpn].page, event.get_start_time() + event.get_time_taken());
 
     const bool lpnIsHot = hcID->is_hot(lpn);
 //std::cout << "BEGIN LOOP " << std::endl << std::endl;

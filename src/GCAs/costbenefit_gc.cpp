@@ -43,7 +43,7 @@ GCImpl_CostBenefit::collect(const Event& evt, Address& victimAddress,
 	[this, &evt](const Address& addr) {
 		const Block* blockPtr = ftl->get_block(addr);
 		const double age =
-		    evt.get_start_time() - blockPtr->get_last_erase_time();
+            evt.get_start_time() - blockPtr->get_last_page_invalidate_time();
 		const double u = static_cast<double>(blockPtr->get_pages_valid()) /
 		                 static_cast<double>(BLOCK_SIZE);
         const double benefitPerCost = (2.0 * u) / (age * (1.0 - u));

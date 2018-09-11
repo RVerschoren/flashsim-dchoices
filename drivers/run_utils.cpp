@@ -74,6 +74,29 @@ read_gc(const std::string &gca, int /*argc*/, char* argv[], ssd::uint &argit)
 }
 
 std::string
+read_wlvl(const ssd::wl_scheme &wlvl, int /*argc*/, char* argv[], ssd::uint &argit)
+{   std::string wlvl_str = "";
+    if(wlvl != WL_NONE){
+        WLVL_ACTIVATION_PROBABILITY = std::stod(argv[argit++]);
+        std::stringstream sstr;
+        if(wlvl == WL_BAN or wlvl == WL_BAN_PROB){
+            WLVL_BAN_D = std::stoi(argv[argit++]);
+            sstr << "ban" << WLVL_BAN_D;
+        }else if(wlvl == WL_RANDOMSWAP){
+            sstr << "swap";
+        }else if(wlvl == WL_HOTCOLDSWAP){
+            sstr << "hcswp";
+        }else if(wlvl ==  WL_MAXVALID){
+            sstr << "maxval";
+        }
+        wlvl_str = sstr.str();
+    }
+    WEAR_LEVELER = wlvl;
+    return wlvl_str;
+}
+
+
+std::string
 create_output_filename(const std::string &ftlstr, const std::string &gcstr, const std::string &wlvlstr, const std::string traceID = "")
 {
     const bool is_trace = not traceID.empty();
@@ -98,17 +121,17 @@ create_output_filename(const std::string &ftlstr, const std::string &gcstr, cons
 }
 
 SSD_Run_Params
-ssd::setup_synth(int argc, char* argv[], std::string wlvlstr, ssd::wl_scheme wlvl)
+ssd::setup_synth(int argc, char* argv[], ssd::wl_scheme wlvl)
 {
     SSD_Run_Params params;
 
     uint argit = 1;
     const std::string ftl(argv[argit++]);
     BLOCK_SIZE = static_cast<uint>(std::stoi(argv[argit++]));
-    std::string gcstr = read_gc(argv[argit++], argc, argv, argit); //DCHOICES_D = static_cast<uint>(std::stoi(argv[argit++]));
+    const std::string gcstr = read_gc(argv[argit++], argc, argv, argit); //DCHOICES_D = static_cast<uint>(std::stoi(argv[argit++]));
     SPARE_FACTOR = std::stod(argv[argit++]);
 
-    std::string ftlstr = read_ftl(ftl, argc, argv, argit);
+    const std::string ftlstr = read_ftl(ftl, argc, argv, argit);
 
     params.run_start = static_cast<uint>(std::stoi(argv[argit++])); // startrun
     params.nr_runs = static_cast<uint>(std::stoi(argv[argit++]));    // Number of runs
@@ -118,10 +141,7 @@ ssd::setup_synth(int argc, char* argv[], std::string wlvlstr, ssd::wl_scheme wlv
     params.max_PE = BLOCK_ERASES -
             static_cast<uint>(std::stoi(argv[argit++]));
 
-    if(wlvl != WL_NONE){
-        WLVL_ACTIVATION_PROBABILITY = std::stod(argv[argit++]);
-    }
-    WEAR_LEVELER = wlvl;
+    const std::string wlvlstr = read_wlvl(wlvl, argc, argv, argit);
 
     params.out_filename = create_output_filename(ftlstr, gcstr, wlvlstr);
     std::cout << params.out_filename << std::endl;
@@ -158,7 +178,7 @@ ssd::run_synth(const SSD_Run_Params& params){
 }
 
 SSD_Run_Params
-ssd::setup_trace(int argc, char* argv[], std::string wlvlstr, ssd::wl_scheme wlvl){
+ssd::setup_trace(int argc, char* argv[], ssd::wl_scheme wlvl){
     SSD_Run_Params params;
     uint argit = 1;
     const std::string ftl(argv[argit++]);
@@ -189,7 +209,9 @@ ssd::setup_trace(int argc, char* argv[], std::string wlvlstr, ssd::wl_scheme wlv
             params.read_mode = EVTRDR_SIMPLE;
             break;
     }
-    WEAR_LEVELER = wlvl;
+
+    const std::string wlvlstr = read_wlvl(wlvl, argc, argv, argit);
+
 /*  std::stringstream sstr;
     sstr << std::fixed; // Print trailing zeroes
     sstr << ftlstr << "trace" << wlvlstr;
@@ -213,8 +235,6 @@ ssd::setup_trace(int argc, char* argv[], std::string wlvlstr, ssd::wl_scheme wlv
 
 void
 ssd::run_trace(const SSD_Run_Params& params){
-    //const std::string fileName = setup(argc, argv);
-
     EventReader evtRdr(params.trace_file, params.nr_events, params.read_mode,
                        create_oracle_filename(params.traceID, HOT_FRACTION, 1));
 
@@ -246,8 +266,6 @@ ssd::run_trace(const SSD_Run_Params& params){
             time += ssd.event_arrive(evt.type, evt.lpn, evt.size, time);
 
             it = (it + 1) % params.nr_events;
-            ///TODO Remove startTime +=
-            ///TODO Remove   5 * ((evt.type == READ) ? PAGE_READ_DELAY : PAGE_WRITE_DELAY);
         }
         ssd.write_statistics_csv(params.out_filename, run);
         delete hcID;

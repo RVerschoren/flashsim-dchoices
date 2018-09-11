@@ -193,8 +193,7 @@ extern uint WEAR_LEVELER;
  * Amount of choices D for use in DChoices wear leveling
  */
 /// TODO Reset to const
-/// TODO introduce
-/// extern uint WEARLEVEL_D;
+extern uint WLVL_BAN_D;
 
 /*
  * Period between Ban wear leveling triggers at GC.
@@ -871,13 +870,14 @@ public:
 	enum page_state get_state(uint page) const;
 	enum page_state get_state(const Address& address) const;
 	double get_last_erase_time(void) const;
-	double get_modification_time(void) const;
+    double get_last_page_invalidate_time(void) const;
+    ///double get_modification_time(void) const;
     ulong get_erase_count(void) const;
 	ulong get_erases_remaining(void) const;
 	uint get_size(void) const;
 	enum status get_next_page(Address& address) const;
 	enum status get_next_page(uint& page) const;
-	void invalidate_page(uint page);
+    void invalidate_page(uint page, const double time);
 	long get_physical_address(void) const;
 	Page* get_page_pointer(const Address& addr);
 	Block* get_pointer(void);
@@ -905,6 +905,7 @@ private:
     ulong max_erases;
 	ulong erases_remaining;
 	double last_erase_time;
+    double last_page_invalidate_time;
 	double erase_delay;
 	double modification_time;
 

@@ -74,13 +74,13 @@ read_gc(const std::string &gca, int /*argc*/, char* argv[], ssd::uint &argit)
 }
 
 std::string
-read_wlvl(const ssd::wl_scheme &wlvl, int /*argc*/, char* argv[], ssd::uint &argit)
+read_wlvl(const ssd::wl_scheme &wlvl, int argc, char* argv[], ssd::uint &argit)
 {   std::string wlvl_str = "";
     if(wlvl != WL_NONE){
         WLVL_ACTIVATION_PROBABILITY = std::stod(argv[argit++]);
         std::stringstream sstr;
         if(wlvl == WL_BAN or wlvl == WL_BAN_PROB){
-            WLVL_BAN_D = std::stoi(argv[argit++]);
+            WLVL_BAN_D = (argit <= (argc-1))? std::stoi(argv[argit++]) : 1;
             sstr << "ban" << WLVL_BAN_D;
         }else if(wlvl == WL_RANDOMSWAP){
             sstr << "swap";

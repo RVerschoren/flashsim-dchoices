@@ -49,6 +49,7 @@ set(ssd_sources
     src/FTLs/fast_ftl.cpp
     src/FTLs/hcwf_ftl.cpp
     src/FTLs/page_ftl.cpp
+    src/FTLs/stat_ftl.cpp
     src/FTLs/swf_ftl.cpp
     src/GCAs/costagetime_gc.cpp
     src/GCAs/costbenefit_gc.cpp

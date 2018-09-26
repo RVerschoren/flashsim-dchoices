@@ -1193,13 +1193,15 @@ class WLvlImpl_Ban_Prob : public Wear_leveler
 {
 public:
 	WLvlImpl_Ban_Prob(FtlParent* FTL,
-	                  const double p = WLVL_ACTIVATION_PROBABILITY);
+                      const double p = WLVL_ACTIVATION_PROBABILITY,
+                      const uint d = WLVL_BAN_D);
 	~WLvlImpl_Ban_Prob();
 	enum status suggest_WF(Address& WFSuggestion,
 	                       const std::vector<Address>& doNotPick);
 
 private:
 	double p;
+    uint d;
 };
 
 class WLvlImpl_RandomSwap : public Wear_leveler

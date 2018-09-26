@@ -30,9 +30,10 @@
 
 using namespace ssd;
 
-WLvlImpl_Ban_Prob::WLvlImpl_Ban_Prob(FtlParent* ftl, const double p)
+WLvlImpl_Ban_Prob::WLvlImpl_Ban_Prob(FtlParent* ftl, const double p, const uint d)
 	: Wear_leveler(ftl)
 	, p(p)
+    , d(d)
 {
 }
 
@@ -59,7 +60,11 @@ WLvlImpl_Ban_Prob::suggest_WF(Address& WFSuggestion,
 		const Address& addr) {
 			return block_is_in_vector(addr, doNotPick);
 		};
-		random_block(WFSuggestion, ignorePred);
+        ///@TODO Remove random_block(WFSuggestion, ignorePred);
+        std::function<uint(const Address&)> costFunc = [this](const Address& addr) {
+            return FTL->get_pages_valid(addr);
+        };
+        d_choices_block(d, WFSuggestion, costFunc, ignorePred);
 #ifdef DEBUG
 		std::cout << "INSERTED BAN PROB at" << FTL->controller.stats.numGCErase
 		          << std::endl;

@@ -55,6 +55,18 @@ Garbage_collector::collect(const Event& evt, Address& address,
 }
 
 void
+Garbage_collector::collect(const Event& evt, Address& address,
+             const std::vector<Address>& doNotPick,
+             const std::pair<Address,Address>& blockAddressRange)
+{
+    std::function<bool(const Address&)> ignorePred =
+        [&doNotPick, &blockAddressRange](const Address &possibleVictim) {
+            return block_is_in_vector(possibleVictim, doNotPick) or not block_is_in_plane_range(possibleVictim, blockAddressRange.first, blockAddressRange.second);
+    };
+    return collect(evt, address, ignorePred);
+}
+
+void
 Garbage_collector::collect(const Event& /*evt*/, Address& /*address*/,
                            const std::function<bool(const Address&)>& /*ignorePred*/)
 {

@@ -27,6 +27,17 @@
 using namespace ssd;
 
 bool
+ssd::block_is_in_plane_range(const Address& block,
+                        const Address& beginBlockAddress, const Address& endBlockAddress)
+{
+	assert(beginBlockAddress.compare(endBlockAddress) >= PLANE); // In same plane
+	if (beginBlockAddress.block <= block.block and block.block <= endBlockAddress.block) {
+		return true;
+	}
+	return false;
+}
+
+bool
 ssd::block_is_in_vector(const Address& block,
                         const std::vector<Address>& vector)
 {

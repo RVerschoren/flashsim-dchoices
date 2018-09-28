@@ -148,11 +148,12 @@ uint BAST_LOG_PAGE_LIMIT = 100;
 uint FAST_LOG_PAGE_LIMIT = 4;
 
 /*
- * Overprovisioning factor (for use in SWF, DWF, HCWF)
+ * Overprovisioning factor (for use in SWF, DWF, HCWF, STAT)
  */
 double SPARE_FACTOR = 0.10;
 double HOT_FRACTION = 0.20;
 double HOT_REQUEST_RATIO = 0.80;
+double HOT_SPARE_FACTOR_FRACTION = 0.50;
 
 /*
  * GC algorithm to use (0 -> FIFO, 1 -> Greedy, 2 -> Random, 3 -> DChoices)

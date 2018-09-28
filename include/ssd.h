@@ -169,6 +169,7 @@ extern const uint CACHE_DFTL_LIMIT;
 extern double SPARE_FACTOR;
 extern double HOT_FRACTION;      // f
 extern double HOT_REQUEST_RATIO; // r
+extern double HOT_SPARE_FACTOR_FRACTION; // p
 
 /*
  * GC algorithm to use
@@ -312,7 +313,8 @@ enum ftl_implementation {
 	IMPL_SWF,
 	IMPL_DWF,
 	IMPL_HCWF,
-	IMPL_COLD
+	IMPL_COLD,
+	IMPL_STAT
 };
 
 /*
@@ -1069,6 +1071,9 @@ public:
 	virtual ~Garbage_collector(void);
     void collect(const Event& evt, Address& addr,
                          const std::vector<Address>& doNotPick);
+    void collect(const Event& evt, Address& addr,
+                 const std::vector<Address>& doNotPick,
+                 const std::pair<Address,Address>& blockAddressRange);
     virtual void collect(const Event& evt, Address& addr,
                          const std::function<bool(const Address&)>& ignorePredicate);
 protected:
@@ -1694,6 +1699,35 @@ private:
 	// std::vector<std::vector<std::vector<std::vector<bool>>>> blockIsHot;
 };
 
+class FtlImpl_STAT : public FtlParent
+{
+public:
+	FtlImpl_STAT(Controller& controller, HotColdID* hcID, const double p);
+	~FtlImpl_STAT();
+	virtual void initialize(const ulong maxLPN);
+	// void initialize(const std::set<ulong> &uniqueLPNs);
+	enum status read(Event& event);
+	enum status write(Event& event);
+	enum status trim(Event& event);
+
+protected:
+	void modifyFTL(const ulong lpn, const Address& address);
+
+private:
+	// Correctness verification
+	void check_valid_pages(const ulong numLPN);
+	void check_block_hotness();
+	void check_ftl_hotness_integrity();
+
+	uint numHotBlocks;
+	uint maxHotBlocks;
+	double p;
+	Address CWF; // Cold WF
+	Address HWF; // Hot WF
+	std::vector<Address> map;
+	HotColdID* hcID;
+};
+
 /* This is a basic implementation that only provides delay updates to events
  * based on a delay value multiplied by the size (number of pages) needed to
  * be written. */
@@ -1868,8 +1902,15 @@ private:
   Utilities and helper functions
 */
 
-//std::string read_sim_parameters(uint argc, char* argv[]);
-//std::string read_sim_trace_parameters(uint argc, char* argv[]);
+/**
+ * Checks whether a block is in a range of blocks within a plane.
+ * @param[in] block Address of the block to check
+ * @param[in] beginBlockAddress Begin of block address range
+ * @param[in] endBlockAddress End of block address range
+ * @return True if block address is greater than or equal to beginBlockAddress and less than or equal to endBlockAddress.
+ */
+bool block_is_in_plane_range(const Address& block,
+                             const Address& beginBlockAddress, const Address& endBlockAddress);
 
 /**
  * Checks whether a block is in a vector of blocks

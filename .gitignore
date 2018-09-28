@@ -13,6 +13,16 @@ ufliptrace
 *.o
 *.kdev4
 traces/
+results*/
+.clang/
+matlab/*.pdf
+matlab/*.fig
+build/
+bin/
+/.codelite
+/results
+/results-21-08-2018
+/results-01-2018
 
 #################
 ## Eclipse
@@ -229,7 +239,3 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
-/.codelite
-/results
-/results-21-08-2018
-/results-01-2018

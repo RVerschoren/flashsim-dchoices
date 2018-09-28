@@ -1,12 +1,13 @@
 %% Select FTL
-b=32;
+%b=32;
+b=4;
 ftlhcwf='hcwf';fieldshcwf = {'fair';'end';'WA'};withhcswap=true;
 ftlcold='cold';fieldscold = {'fair';'end';'WA'};withhcswap=true;
 ftldwf='dwf';fieldsdwf = {'fair';'end';'WA'};withhcswap=false;
 
-ftlhcwf='hcwf';fieldshcwf = {'WA'};withhcswap=true;
-ftlcold='cold';fieldscold = {'WA'};withhcswap=true;
-ftldwf='dwf';fieldsdwf = {'WA'};withhcswap=false;
+%ftlhcwf='hcwf';fieldshcwf = {'WA'};withhcswap=true;
+%ftlcold='cold';fieldscold = {'WA'};withhcswap=true;
+%ftldwf='dwf';fieldsdwf = {'WA'};withhcswap=false;
 
 % ftl=ftlhcwf;fields=fieldshcwf;
 %ftl=ftldwf;fields=fieldsdwf;
@@ -19,7 +20,7 @@ stepsize=0.01;
 % Wear leveling schemes
 ban='ban';
 hcswap='hcswp';
-resultsdir='../results/';
+resultsdir='../resultscold/';
 
 % reffile = strcat(resultsdir,ftl,'trace/',ftl,'trace-b32-d10-sf0.10-f0.010');
 % refleg = 'd = 10, NoWL';
@@ -66,15 +67,16 @@ resultsdir='../results/';
 % end
 
 %% Plot synth data
-gcas={'d', 'cbd'};
+bstr=num2str(b);
+gcas={'d'}%, 'cbd'};
 for gc_index=1:numel(gcas)
     gca=gcas{gc_index};
-    for d=[10 30]
+    for d=[1 3 10 30]
         dstr=num2str(d);
         gcastr=strcat(gca, dstr);
         %p=[0.5 0.1 0.05 0.01 0.005 0.001];
         %p=[0.05 0.01 0.005 0.001];
-        p=[0.05 0.01 0.001];
+        p=[0.05 0.01];
         f=[0.01 0.10 0.20];
         r=1-f;
 
@@ -82,32 +84,46 @@ for gc_index=1:numel(gcas)
         for it=1:numel(f)
             rstr=num2str(r(it), '%4.3f');
             fstr=num2str(f(it), '%4.3f');
-            refdwffile = strcat(resultsdir, ftldwf,'/',ftldwf,'-b32-',gca,dstr,'-sf0.10-f',fstr, '-r',rstr);
-            refhcwffile = strcat(resultsdir, ftlhcwf,'/',ftlhcwf,'-b32-',gca,dstr,'-sf0.10-f',fstr, '-r',rstr);
-            refcoldfile = strcat(resultsdir, ftlcold,'/',ftlcold,'-b32-',gca,dstr,'-sf0.10-f',fstr, '-r',rstr);
+            refdwffile = strcat(resultsdir, ftldwf,'/',ftldwf,'-b',bstr,'-',gca,dstr,'-sf0.10-f',fstr, '-r',rstr);
+            refhcwffile = strcat(resultsdir, ftlhcwf,'/',ftlhcwf,'-b',bstr,'-',gca,dstr,'-sf0.10-f',fstr, '-r',rstr);
+            refcoldfile = strcat(resultsdir, ftlcold,'/',ftlcold,'-b',bstr,'-',gca,dstr,'-sf0.10-f',fstr, '-r',rstr);
             refleg = strcat(gca, ' = ', num2str(d), ', NoWL');
-            %%plotWLvlSynth(resultsdir, refdwffile, refleg, ftldwf, gca, dstr, ban, f(it), r(it), fieldsdwf, p , savetofile);
-            %%plotWLvlSynth(resultsdir, refhcwffile, refleg, ftlhcwf, gca, dstr, ban, f(it), r(it), fieldshcwf, p , savetofile);
-            %%plotWLvlSynth(resultsdir, refhcwffile, refleg, ftlhcwf, gca, dstr, hcswap, f(it), r(it), fieldshcwf, p , savetofile);
-            %%plotWLvlSynth(resultsdir, refcoldfile, refleg, ftlcold, gca, dstr, ban, f(it), r(it), fieldshcwf, p , savetofile);
-            %%plotWLvlSynth(resultsdir, refcoldfile, refleg, ftlcold, gca, dstr, hcswap, f(it), r(it), fieldshcwf, p , savetofile);
+                %%plotWLvlSynth(resultsdir, refdwffile, refleg, ftldwf, gca, dstr, ban, f(it), r(it), fieldsdwf, p , savetofile);
+                %%plotWLvlSynth(resultsdir, refhcwffile, refleg, ftlhcwf, gca, dstr, ban, f(it), r(it), fieldshcwf, p , savetofile);
+                %%plotWLvlSynth(resultsdir, refhcwffile, refleg, ftlhcwf, gca, dstr, hcswap, f(it), r(it), fieldshcwf, p , savetofile);
+                %%plotWLvlSynth(resultsdir, refcoldfile, refleg, ftlcold, gca, dstr, ban, f(it), r(it), fieldshcwf, p , savetofile);
+                %%plotWLvlSynth(resultsdir, refcoldfile, refleg, ftlcold, gca, dstr, hcswap, f(it), r(it), fieldshcwf, p , savetofile);
             %plot2WLvlSynth(resultsdir, refdwffile, strcat(ftldwf,' NoWL'), refhcwffile, strcat(ftlhcwf,' NoWL'), ftldwf, ftlhcwf, gca, dstr, ban, ban, f(it), r(it), fieldshcwf, p , savetofile);
             %plot2WLvlSynth(resultsdir, refhcwffile, strcat(ftlhcwf,' NoWL'), refcoldfile, strcat(ftlcold,' NoWL'), ftlhcwf, ftlcold, gca, dstr, ban, ban, f(it), r(it), fieldshcwf, p , savetofile);
             %plot2WLvlSynth(resultsdir, refhcwffile, strcat(ftlhcwf,' NoWL'), refcoldfile, strcat(ftlcold,' NoWL'), ftlhcwf, ftlcold, gca, dstr, hcswap, hcswap, f(it), r(it), fieldshcwf, p , savetofile);
 
-            [WAban, confban]=computeWANoWLvl(resultsdir, ftlcold, gca, d, f(it), r(it));
+        
+%             [WAban, confban]=computeWANoWLvl(resultsdir, ftlhcwf, gca, d, f(it), r(it));
+%             WAode = hotcold_separ_HWFCWF_fast(b, d, r(it), f(it), rho, stepsize);
+%             {'NoWlvl' d rho r(it) f(it)  WAode WAban confban}
+%             for pb=p
+%                 [WAban, confban]=computeWA(resultsdir, ftlhcwf, gca, d, ban, f(it), r(it), pb);
+%                 WAode = hotcold_HCWF_ban(b, d, r(it), f(it), rho, pb, stepsize);
+%                 {'BAN' d rho r(it) f(it) pb  WAode WAban confban}
+%             end
+%             for ps=p
+%                 [WAswp, confswp]=computeWA(resultsdir, ftlhcwf, gca, d, hcswap, f(it), r(it), ps);
+%                 WAodeswp = hotcold_HCWF_hcswap(b, d, r(it), f(it), rho, ps, stepsize);
+%                 {'HCSWAP' d rho r(it) f(it) ps  WAodeswp WAswp confswp}
+%             end
+            [WAban, confban]=computeWANoWLvl(resultsdir, ftlcold, gca, b, d, f(it), r(it));
             WAode = hotcold_COLD(b, d, r(it), f(it), rho, stepsize);
             {'NoWlvl' d rho r(it) f(it)  WAode WAban confban}
 
             for pb=p(2)
-                [WAban, confban]=computeWA(resultsdir, ftlcold, gca, d, ban, f(it), r(it), pb);
-                WAode = hotcold_COLD_ban_mex(b, d, r(it), f(it), rho, pb, stepsize);
-                {'BAN' d rho r(it) f(it) pb  WAode WAban confban}
+               [WAban, confban]=computeWA(resultsdir, ftlcold, gca, b, d, ban, f(it), r(it), pb);
+               WAode = hotcold_COLD_ban_mex(b, d, r(it), f(it), rho, pb, stepsize);
+               {'BAN' d rho r(it) f(it) pb  WAode WAban confban}
             end
             for ps=p(2)
-                [WAswp, confswp]=computeWA(resultsdir, ftlcold, gca, d, hcswap, f(it), r(it), ps);
-                WAodeswp = hotcold_COLD_hcswap_mex(b, d, r(it), f(it), rho, ps, stepsize);
-                {'HCSWAP' d rho r f ps  WAodeswp WAswp confswp}
+               [WAswp, confswp]=computeWA(resultsdir, ftlcold, gca, b, d, hcswap, f(it), r(it), ps);
+               WAodeswp = hotcold_COLD_hcswap_mex(b, d, r(it), f(it), rho, ps, stepsize);
+               {'HCSWAP' d rho r(it) f(it) ps  WAodeswp WAswp confswp}
             end
         end
     end
@@ -260,15 +276,18 @@ function plot2WLvlSynth(resultsdir,reffileformat, refleg, reffile2format, refleg
         pc2 = strcat(resultsdir,ftl2,wlvl2,'/',ftl2,wlvl2,'-b32-',gca,d,'-sf0.10-f', f, '-r', r, '-p', p,'-',field,'.*.csv');
         files = cat(1, reffile, reffile2, pc, pc2);
         plottitle=strcat(ftl,' ',wlvl,' vs ',ftl2,' ',wlvl2,' f= ',f, ', r= ', r, ', ', upper(gca),' d=',d);
+        adaptlim=isequal(field,'fair');
         if(isequal(field,'colderase') || isequal(field,'WA'))
-            barUnmergedFiles(savelocation, files, {'MaxPE',fieldAxis, plottitle}, leg, '', [14 14]);
+            leg = cat(1, ftl(1:2), ftl(1:2),  strcat({ftl(1)}, num2str(pin','%4.3f')), strcat({ftl2(1)}, num2str(pin','%4.3f')));
+            barUnmergedFiles(savelocation, files, {'MaxPE',fieldAxis, plottitle}, leg, '', [14 14], 0);
         else
-            plotUnmergedFiles(savelocation, files, {'MaxPE',fieldAxis, plottitle}, leg, '', {}, [14 14]);
+            plotUnmergedFiles(savelocation, files, {'MaxPE',fieldAxis, plottitle}, leg, '', {}, [14 14],0, adaptlim);
         end
     end
 end
 
-function [WA, conf]=computeWANoWLvl(resultsdir, ftl, gca, din, fin, rin)
+function [WA, conf]=computeWANoWLvl(resultsdir, ftl, gca, bin, din, fin, rin)
+    b = num2str(bin);
     f = num2str(fin,'%4.3f');
     r = num2str(rin,'%4.3f');
     d = num2str(din);
@@ -277,14 +296,15 @@ function [WA, conf]=computeWANoWLvl(resultsdir, ftl, gca, din, fin, rin)
     %reffile = strcat(reffileformat, '-', field, '.*.csv');
         
         
-    pc = strcat(resultsdir,ftl,'/',ftl,'-b32-',gca,d,'-sf0.10-f', f, '-r', r, '-',field,'.*.csv');
+    pc = strcat(resultsdir,ftl,'/',ftl,'-b',b,'-',gca,d,'-sf0.10-f', f, '-r', r, '-',field,'.*.csv');
 %     files = cat(1, reffile, pc);
     [WA,conf]=mean_and_conf_int({pc});
 end
 
 
-function [WA, conf]=computeWA(resultsdir, ftl, gca, din, wlvl, fin, rin, pin)
+function [WA, conf]=computeWA(resultsdir, ftl, gca, bin, din, wlvl, fin, rin, pin)
     p = cellfun(@(x) num2str(x,'%4.3f'), num2cell(pin'), 'UniformOutput', false);
+    b = num2str(bin);
     f = num2str(fin,'%4.3f');
     r = num2str(rin,'%4.3f');
     d = num2str(din);
@@ -292,7 +312,7 @@ function [WA, conf]=computeWA(resultsdir, ftl, gca, din, wlvl, fin, rin, pin)
     field='WA'; 
     %reffile = strcat(reffileformat, '-', field, '.*.csv');
         
-    pc = strcat(resultsdir,ftl,wlvl,'/',ftl,wlvl,'-b32-',gca,d,'-sf0.10-f', f, '-r', r, '-p', p,'-',field,'.*.csv');
+    pc = strcat(resultsdir,ftl,wlvl,'/',ftl,wlvl,'-b',b,'-',gca,d,'-sf0.10-f', f, '-r', r, '-p', p,'-',field,'.*.csv');
 %     files = cat(1, reffile, pc);
     [WA,conf]=mean_and_conf_int(pc);
 end

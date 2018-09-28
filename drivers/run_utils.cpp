@@ -27,6 +27,12 @@ read_ftl(const std::string &ftl, int /*argc*/, char* argv[], ssd::uint &argit)
         FTL_IMPLEMENTATION = IMPL_COLD;
         HOT_FRACTION = std::stod(argv[argit++]);      // f
         HOT_REQUEST_RATIO = std::stof(argv[argit++]); // r
+    } else if (boost::iequals(ftl, "STAT")) {
+        ftlstr = "stat";
+        FTL_IMPLEMENTATION = IMPL_STAT;
+        HOT_FRACTION = std::stod(argv[argit++]);      // f
+        HOT_REQUEST_RATIO = std::stof(argv[argit++]); // r
+        HOT_SPARE_FACTOR_FRACTION = std::stof(argv[argit++]); // p
     } else {
         // SWF
         ftlstr = "swf";

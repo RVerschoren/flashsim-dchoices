@@ -93,6 +93,7 @@ FtlImpl_STAT::initialize(const ulong numLPN)
 
 FtlImpl_STAT::FtlImpl_STAT(Controller& controller, HotColdID* hcID, const double p)
         : FtlParent(controller)
+        , p(p) 
         , map()
         , hcID(hcID)
 {
@@ -127,108 +128,58 @@ FtlImpl_STAT::write(Event& event) {
         const ulong lpn = event.get_logical_address();
 
         /// Invalidate previous page
-    get_block(map[lpn])->invalidate_page(map[lpn].page, event.get_start_time() + event.get_time_taken());
+        get_block(map[lpn])->invalidate_page(map[lpn].page, event.get_start_time() + event.get_time_taken());
 
         const bool lpnIsHot = hcID->is_hot(lpn);
+        // Locate in same plane
+        Address planeAddress = (map[lpn]);
+        Address beginBlock(planeAddress);
+        beginBlock.block = lpnIsHot? 0 : maxHotBlocks;
+        Address endBlock(planeAddress);
+        endBlock.block = lpnIsHot? (maxHotBlocks-1) : PLANE_SIZE;
 
-        while (get_next_page(HWF) != SUCCESS or
-                get_next_page(CWF) != SUCCESS) // Still space in WF
+        std::pair<Address,Address> range(beginBlock, endBlock);
+
+        while ((lpnIsHot and get_next_page(HWF) != SUCCESS) or
+                (not lpnIsHot and get_next_page(CWF) != SUCCESS)) // Still space in WF
         {
-                const bool HWFInitiated =
-                get_next_page(HWF) != SUCCESS; // HWF initiated cleaning cycle
+            // Need to select a victim block through GC
+            Address victim = map[lpn];
+            const std::vector<Address> currentWF = { HWF, CWF };
 
-                // Need to select a victim block through GC
-                Address victim = map[lpn];
-                const std::vector<Address> currentWF = { HWF, CWF };
+            if (wlvl->suggest_WF(victim, currentWF) == FAILURE) {
+                    garbage->collect(event, victim, currentWF, range);
+            }
+            Block* victimPtr = get_block(victim);
+            const bool victimIsHot = get_block_hotness(victim);
+            assert(lpnIsHot == victimIsHot);
 
-                if (wlvl->suggest_WF(victim, currentWF) == FAILURE) {
-                        garbage->collect(event, victim, currentWF);
-                }
-                Block* victimPtr = get_block(victim);
-                const bool victimIsHot = get_block_hotness(victim);
+            const uint j = get_pages_valid(victim);
+            assert(j <= BLOCK_SIZE);
 
-                const uint j = get_pages_valid(victim);
-                assert(j <= BLOCK_SIZE);
+            if(lpnIsHot){
+                victimPtr->_erase_and_copy(
+                    event, HWF, get_block(HWF), // Copy to self
+                [this, &victim](const ulong lpn, const Address& addr) {
+                        map[lpn] = addr;
+                },
+                [this](const ulong lpn, const uint newPage) {
+                        map[lpn].page = newPage;
+                });
+                HWF = victim;
+            }else{
+                victimPtr->_erase_and_copy(
+                    event, CWF, get_block(CWF), // Copy to self
+                [this, &victim](const ulong lpn, const Address& addr) {
+                        map[lpn] = addr;
+                },
+                [this](const ulong lpn, const uint newPage) {
+                        map[lpn].page = newPage;
+                });
+                CWF = victim;
+            }
 
-                if (HWFInitiated) {
-                        if (victimIsHot) {
-                                victimPtr->_erase_and_copy(
-                                    event, HWF, get_block(HWF), // Copy to self
-                                [this, &victim](const ulong lpn, const Address& addr) {
-                                        map[lpn] = addr;
-                                },
-                                [this](const ulong lpn, const uint newPage) {
-                                        map[lpn].page = newPage;
-                                });
-                                HWF = victim;
-                        } else if (j <= get_block(CWF)
-                                   ->get_pages_empty()) { // Sufficient space to
-                                // copy everything to
-                                // CWF
-                                victimPtr->_erase_and_copy(
-                                    event, CWF, get_block(CWF), // Copy to CWF where possible
-                                [this, &victim](const ulong lpn, const Address& addr) {
-                                        map[lpn] = addr;
-                                },
-                                [this](const ulong lpn, const uint newPage) {
-                                        map[lpn].page = newPage;
-                                });
-                                HWF = victim;
-                                set_block_hotness(HWF, true);
-                                numHotBlocks++;
-                        } else {
-                                victimPtr->_erase_and_copy(
-                                    event, CWF, get_block(CWF), // Copy to CWF where possible
-                                [this, &victim](const ulong lpn, const Address& addr) {
-                                        map[lpn] = addr;
-                                },
-                                [this](const ulong lpn, const uint newPage) {
-                                        map[lpn].page = newPage;
-                                });
-                                CWF = victim;
-                                set_block_hotness(CWF, false);
-                        }
-
-                } else { // CWF was full
-                        if (not victimIsHot) {
-                                victimPtr->_erase_and_copy(
-                                    event, CWF, get_block(CWF), // Copy to self
-                                [this, &victim](const ulong lpn, const Address& addr) {
-                                        map[lpn] = addr;
-                                },
-                                [this](const ulong lpn, const uint newPage) {
-                                        map[lpn].page = newPage;
-                                });
-                                CWF = victim;
-                        } else if (j <= get_block(HWF)
-                                   ->get_pages_empty()) { // Sufficient space to
-                                // copy everything to
-                                // HWF
-                                victimPtr->_erase_and_copy(
-                                    event, HWF, get_block(HWF), // Copy to HWF where possible
-                                [this, &victim](const ulong lpn, const Address& addr) {
-                                        map[lpn] = addr;
-                                },
-                                [this](const ulong lpn, const uint newPage) {
-                                        map[lpn].page = newPage;
-                                });
-                                CWF = victim;
-                                set_block_hotness(CWF, false);
-                                numHotBlocks--;
-                        } else {
-                                victimPtr->_erase_and_copy(
-                                    event, HWF, get_block(HWF), // Copy to HWF where possible
-                                [this, &victim](const ulong lpn, const Address& addr) {
-                                        map[lpn] = addr;
-                                },
-                                [this](const ulong lpn, const uint newPage) {
-                                        map[lpn].page = newPage;
-                                });
-                                HWF = victim;
-                                set_block_hotness(HWF, true);
-                        }
-                }
-        controller.stats.erase_block(j, victimIsHot);
+            controller.stats.erase_block(j, victimIsHot);
                 if (controller.stats.get_currentPE() >=
                         victimPtr->get_erases_remaining()) {
                         controller.stats.next_currentPE();

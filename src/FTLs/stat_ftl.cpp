@@ -33,7 +33,7 @@ FtlImpl_STAT::initialize(const ulong numLPN)
 
         /// TODO  Review how to determine first cold block when not assuming 1 plane
         const double f = HOT_FRACTION;
-        maxHotBlocks = static_cast<uint>(std::ceil(f * PLANE_SIZE)) + 1;
+        maxHotBlocks = static_cast<uint>(std::ceil(f * (1-SPARE_FACTOR) * PLANE_SIZE + p * SPARE_FACTOR * PLANE_SIZE)) + 1;
         const uint numColdBlocks = PLANE_SIZE - maxHotBlocks;
         CWF = Address(0, 0, 0, maxHotBlocks, 0, PAGE);
 

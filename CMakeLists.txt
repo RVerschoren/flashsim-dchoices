@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 2.8)
 
 project(flashsim-dchoices)
 
@@ -9,6 +9,8 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${OWN_GXX_FLAGS}") #" #-DDEB
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OWN_GXX_FLAGS} -Ofast")
 set( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${OWN_GXX_FLAGS}" )
 
+#Optional for basename implementation
+#set(OWN_CXX_LINKER_FLAGS "-lboost_filesystem -lboost_system")
 #set( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${OWN_CXX_LINKER_FLAGS}" )
 
 ############################################################
@@ -87,12 +89,14 @@ set(EXE_SOURCES
 	drivers/run_ComputeOracle.cpp
 	drivers/run_ConvertBIOTrace.cpp
 	drivers/run_SimBanProb.cpp
-	drivers/run_SimHCSwap.cpp
+        drivers/run_SimHCSwap.cpp
+        drivers/run_SimHCSwapRelative.cpp
 	drivers/run_SimMaxValid.cpp
 	drivers/run_SimNoWear.cpp
 	drivers/run_SimSwap.cpp
 	drivers/run_SimTraceBanProb.cpp
-	drivers/run_SimTraceHCSwap.cpp
+        drivers/run_SimTraceHCSwap.cpp
+        drivers/run_SimTraceHCSwapRelative.cpp
 	drivers/run_SimTraceMaxValid.cpp
 	drivers/run_SimTraceNoWear.cpp
 	drivers/run_SimTraceSwap.cpp

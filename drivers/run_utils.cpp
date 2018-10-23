@@ -1,15 +1,27 @@
-///TODO Put functions that read parameters for simulation runs here, maybe even code to run the simulations.
-
 #include "ssd.h"
 #include "ssd_run.h"
 #include <boost/algorithm/string.hpp>
+///TODO Include if possible #include <boost/filesystem/path.hpp>
 #include <iomanip>
 #include <iostream>
 
 using namespace ssd;
 
 std::string
-read_ftl(const std::string &ftl, int /*argc*/, char* argv[], ssd::uint &argit)
+basename(const std::string& filepath)
+{
+    ///TODO Enable Boost if possible
+    //Boost way
+    //boost::filesystem::path file_path{filepath};
+    //return file_path.stem().string();
+
+    //Fall-back way
+    const std::string filename = filepath.substr(filepath.find_last_of("/\\")+1);
+    return filename.substr(0, filename.find_last_of("."));
+}
+
+std::string
+read_ftl(const std::string &ftl, uint /*argc*/, char* argv[], ssd::uint &argit)
 {
     std::string ftlstr;
     if (boost::iequals(ftl, "DWF")) {
@@ -44,7 +56,7 @@ read_ftl(const std::string &ftl, int /*argc*/, char* argv[], ssd::uint &argit)
 }
 
 std::string
-read_gc(const std::string &gca, int /*argc*/, char* argv[], ssd::uint &argit)
+read_gc(const std::string &gca, uint /*argc*/, char* argv[], ssd::uint &argit)
 {
     std::string gcstr;
     if (boost::iequals(gca, "DCH")) {
@@ -80,20 +92,28 @@ read_gc(const std::string &gca, int /*argc*/, char* argv[], ssd::uint &argit)
 }
 
 std::string
-read_wlvl(const ssd::wl_scheme &wlvl, int argc, char* argv[], ssd::uint &argit)
+read_wlvl(const ssd::wl_scheme &wlvl, uint argc, char* argv[], ssd::uint &argit, const double blockSize, const double spareFactor, const double blockSwapCost)
 {   std::string wlvl_str = "";
-    if(wlvl != WL_NONE){
-        WLVL_ACTIVATION_PROBABILITY = std::stod(argv[argit++]);
+    if(wlvl != WL_NONE and wlvl != WL_HOTCOLDSWAP_RELATIVE){
         std::stringstream sstr;
-        if(wlvl == WL_BAN or wlvl == WL_BAN_PROB){
-            WLVL_BAN_D = (argit <= (argc-1))? std::stoi(argv[argit++]) : 1;
-            sstr << "ban" << WLVL_BAN_D;
-        }else if(wlvl == WL_RANDOMSWAP){
-            sstr << "swap";
-        }else if(wlvl == WL_HOTCOLDSWAP){
-            sstr << "hcswp";
-        }else if(wlvl ==  WL_MAXVALID){
-            sstr << "maxval";
+        sstr << std::fixed; // Print trailing zeroes
+        if(wlvl == WL_HOTCOLDSWAP_RELATIVE){
+            const double relativeIncreaseWA = std::stod(argv[argit++]);
+            sstr << "hcswprelinc" << std::setprecision(3) << relativeIncreaseWA;
+            WLVL_ACTIVATION_PROBABILITY = (relativeIncreaseWA)*blockSize/(blockSize*spareFactor*blockSwapCost);
+        }else{
+            WLVL_ACTIVATION_PROBABILITY = std::stod(argv[argit++]);
+
+            if(wlvl == WL_BAN or wlvl == WL_BAN_PROB){
+                WLVL_BAN_D = (argit <= (argc-1))? std::stoi(argv[argit++]) : 1;
+                sstr << "ban" << WLVL_BAN_D;
+            }else if(wlvl == WL_RANDOMSWAP){
+                sstr << "swap";
+            }else if(wlvl == WL_HOTCOLDSWAP){
+                sstr << "hcswp";
+            }else if(wlvl ==  WL_MAXVALID){
+                sstr << "maxval";
+            }
         }
         wlvl_str = sstr.str();
     }
@@ -127,7 +147,7 @@ create_output_filename(const std::string &ftlstr, const std::string &gcstr, cons
 }
 
 SSD_Run_Params
-ssd::setup_synth(int argc, char* argv[], ssd::wl_scheme wlvl)
+ssd::setup_synth(uint argc, char* argv[], ssd::wl_scheme wlvl)
 {
     SSD_Run_Params params;
 
@@ -147,7 +167,7 @@ ssd::setup_synth(int argc, char* argv[], ssd::wl_scheme wlvl)
     params.max_PE = BLOCK_ERASES -
             static_cast<uint>(std::stoi(argv[argit++]));
 
-    const std::string wlvlstr = read_wlvl(wlvl, argc, argv, argit);
+    const std::string wlvlstr = read_wlvl(wlvl, argc, argv, argit, BLOCK_SIZE, SPARE_FACTOR, 2*BLOCK_SIZE*(1.0-SPARE_FACTOR));
 
     params.out_filename = create_output_filename(ftlstr, gcstr, wlvlstr);
     std::cout << params.out_filename << std::endl;
@@ -184,7 +204,7 @@ ssd::run_synth(const SSD_Run_Params& params){
 }
 
 SSD_Run_Params
-ssd::setup_trace(int argc, char* argv[], ssd::wl_scheme wlvl){
+ssd::setup_trace(uint argc, char* argv[], ssd::wl_scheme wlvl){
     SSD_Run_Params params;
     uint argit = 1;
     const std::string ftl(argv[argit++]);
@@ -192,7 +212,7 @@ ssd::setup_trace(int argc, char* argv[], ssd::wl_scheme wlvl){
     std::string gcstr = read_gc(argv[argit++], argc, argv, argit); //DCHOICES_D = static_cast<uint>(std::stoi(argv[argit++]));
     SPARE_FACTOR = std::stod(argv[argit++]);
 
-    std::string ftlstr = read_ftl(ftl, argc, argv, argit);
+    std::string ftlstr = read_ftl(ftl, argc, argv, argit); // Reads HOT_FRACTION and HOT_REQUEST_RATIO but ignores HOT_REQUEST_RATIO 
 
     params.run_start = static_cast<uint>(std::stoi(argv[argit++])); // startrun
     params.nr_runs = static_cast<uint>(std::stoi(argv[argit++]));    // Number of runs
@@ -202,7 +222,8 @@ ssd::setup_trace(int argc, char* argv[], ssd::wl_scheme wlvl){
               argv[argit++])); // Maximum number of PE cycles, counting back
     params.nr_events = std::stoul(argv[argit++]);
     params.trace_file = argv[argit++];
-    params.traceID = params.trace_file.substr(0, 4);
+    const std::string trace_file_basename = basename(params.trace_file);
+    params.traceID = trace_file_basename.substr(0, 4);
 
     switch (std::stoi(argv[argit++])) {
         case 0:
@@ -216,7 +237,7 @@ ssd::setup_trace(int argc, char* argv[], ssd::wl_scheme wlvl){
             break;
     }
 
-    const std::string wlvlstr = read_wlvl(wlvl, argc, argv, argit);
+    const std::string wlvlstr = read_wlvl(wlvl, argc, argv, argit, BLOCK_SIZE,SPARE_FACTOR, 2*BLOCK_SIZE*(1.0-SPARE_FACTOR));
 
 /*  std::stringstream sstr;
     sstr << std::fixed; // Print trailing zeroes
@@ -252,6 +273,7 @@ ssd::run_trace(const SSD_Run_Params& params){
       std::ceil(static_cast<double>(numLPN) /
                 static_cast<double>(BLOCK_SIZE * (1.0 - SPARE_FACTOR))));
 
+    std::cout << "Writing results to " << params.out_filename << std::endl;
     for (uint run = params.run_start; run < (params.run_start + params.nr_runs); run++) {
         RandNrGen::reset();
         HotColdID* hcID = new Static_HCID(maxLPN);

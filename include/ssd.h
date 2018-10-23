@@ -340,7 +340,8 @@ enum wl_scheme {
 	WL_BAN_PROB,
 	WL_MAXVALID,
 	WL_RANDOMSWAP,
-	WL_HOTCOLDSWAP
+    WL_HOTCOLDSWAP,
+    WL_HOTCOLDSWAP_RELATIVE // Upper bound on relative increase of WA
 };
 
 /*
@@ -583,15 +584,13 @@ public:
 	void print_statistics();
 	void reset_statistics();
 	void write_statistics(FILE* stream);
-	void write_statistics_csv(const std::string fileName, const uint runID,
-	                          const std::string traceID = "");
+    void write_statistics_csv(const std::string fileName, const uint runID);
 	void write_header(FILE* stream);
 
 private:
 	uint currentPE;
 	std::string create_filename(const std::string fileNameStart,
-	                            const std::string fieldName, const uint runID,
-	                            const std::string traceID = "");
+                                const std::string fieldName, const uint runID);
 	void write_csv(const std::string fileName, const uint value,
 	               const uint begin = 0);
 	void write_csv(const std::string fileName, const ulong value,
@@ -1825,8 +1824,7 @@ public:
 	void print_statistics();
 	void reset_statistics();
 	void write_statistics(FILE* stream);
-	void write_statistics_csv(const std::string fileName, const uint runID,
-	                          const std::string traceID = "");
+    void write_statistics_csv(const std::string fileName, const uint runID);
 	void write_header(FILE* stream);
 	const Controller& get_controller(void) const;
 	void* get_result_buffer();

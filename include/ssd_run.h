@@ -33,13 +33,13 @@ struct SSD_Run_Params{
  * @return String description of FTL, for use in filenames
  */
 SSD_Run_Params
-setup_synth(int argc, char* argv[], ssd::wl_scheme wlvl = WL_NONE);
+setup_synth(uint argc, char* argv[], ssd::wl_scheme wlvl = WL_NONE);
 
 void
 run_synth(const SSD_Run_Params& params);
 
 SSD_Run_Params
-setup_trace(int argc, char* argv[], ssd::wl_scheme wlvl = WL_NONE);
+setup_trace(uint argc, char* argv[], ssd::wl_scheme wlvl = WL_NONE);
 
 void
 run_trace(const SSD_Run_Params& params);

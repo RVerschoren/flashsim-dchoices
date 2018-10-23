@@ -515,9 +515,9 @@ Ssd::write_header(FILE* stream)
 }
 
 void
-Ssd::write_statistics_csv(std::string fileName, uint runID, std::string traceID)
+Ssd::write_statistics_csv(std::string fileName, uint runID)
 {
-	controller.stats.write_statistics_csv(fileName, runID, traceID);
+    controller.stats.write_statistics_csv(fileName, runID);
 }
 
 const Controller&

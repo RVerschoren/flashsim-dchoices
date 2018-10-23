@@ -279,42 +279,42 @@ Stats::write_csv(const std::string fileName, const std::vector<ulong>& vector,
 
 std::string
 Stats::create_filename(const std::string fileNameStart,
-                       const std::string fieldName, const uint runID,
-                       const std::string traceID)
+                       const std::string fieldName, const uint runID)
 {
 	std::stringstream sstr;
 	sstr << fileNameStart;
-	if (not traceID.empty()) {
-		sstr << "-" << traceID;
-	}
+    ///@TODO Remove
+    //if (not traceID.empty()) {
+    //	sstr << "-" << traceID;
+    //}
 	sstr << "-" << fieldName;
 	sstr << "." << std::setw(2) << runID << ".csv";
 	return sstr.str();
 }
 
 void
-Stats::write_statistics_csv(const std::string fileName, const uint runID,
-                            const std::string traceID)
+Stats::write_statistics_csv(const std::string fileName, const uint runID)
 {
 	std::cout << "FTLWRITE: " << numFTLWrite << std::endl;
+    std::cout << create_filename(fileName, "WA", runID) << std::endl;
 	std::cout << "GCWRITE: " << numGCWrite << std::endl;
 	std::cout << "WLWRITE: " << numWLWrite << std::endl;
-	write_csv(create_filename(fileName, "WA", runID, traceID),
+    write_csv(create_filename(fileName, "WA", runID),
 	          (double)(numGCWrite + numFTLWrite + numWLWrite) /
 	          (double)numFTLWrite);
 	std::cout << "WA: "
 	          << (double)(numGCWrite + numFTLWrite + numWLWrite) /
 	          (double)numFTLWrite
 	          << std::endl;
-	write_csv(create_filename(fileName, "fair", runID, traceID), PEfairness, 0);
+    write_csv(create_filename(fileName, "fair", runID), PEfairness, 0);
 	std::cout << "Last fairness: " << PEfairness.at(PEfairness.size() - 1)
 	          << std::endl;
-	write_csv(create_filename(fileName, "end", runID, traceID), SSDendurance,
+    write_csv(create_filename(fileName, "end", runID), SSDendurance,
 	          0);
 	std::cout << "Last endurance: " << SSDendurance.at(SSDendurance.size() - 1)
 	          << std::endl;
     if(WEAR_LEVELER == WL_RANDOMSWAP || WEAR_LEVELER == WL_HOTCOLDSWAP)
-        write_csv(create_filename(fileName, "swapcost", runID, traceID), swapCost, 0);
+        write_csv(create_filename(fileName, "swapcost", runID), swapCost, 0);
 	/// FTL specific data
 	// if (FTL_IMPLEMENTATION == IMPL_DWF) {
 	//    std::cout << "DWF statistics" << std::endl;

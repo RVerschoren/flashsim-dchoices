@@ -37,7 +37,7 @@
 #include <vector>
 
 using namespace ssd;
-
+#ifndef NOT_USE_BLOCKMGR
 FtlImpl_BDftl::BPage::BPage()
 {
 	this->pbn = -1;
@@ -454,3 +454,4 @@ FtlImpl_BDftl::print_ftl_statistics()
 	printf(" Blocks optimal: %i\n", numOptimal);
 	Block_manager::instance()->print_statistics();
 }
+#endif

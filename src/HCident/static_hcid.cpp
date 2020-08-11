@@ -28,9 +28,6 @@ Static_HCID::Static_HCID(ulong maxLPN, double hotFraction)
 	, hotFraction(hotFraction)
 	, numHotLPN(static_cast<ulong>(std::floor(hotFraction * maxLPN)))
 {
-	for (uint i = 0; i < maxLPN; i++) {
-		hotMap[i] = is_hot(i);
-	}
 }
 
 Static_HCID::~Static_HCID()
@@ -40,5 +37,8 @@ Static_HCID::~Static_HCID()
 bool
 Static_HCID::is_hot(ulong lpn) const
 {
+#ifndef NDEBUG
+//	std::cout  << "Static HCID check (" << lpn << " < " << numHotLPN <<  "): " << (lpn < numHotLPN) << std::endl;
+#endif
 	return lpn < numHotLPN;
 }

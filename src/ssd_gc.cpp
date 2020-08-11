@@ -18,57 +18,45 @@
 /****************************************************************************/
 
 /* Garbage_collector class
-* Brendan Tauras 2009-11-04
-*
-* This class is a stub class for the user to use as a template for implementing
-* his/her garbage collector scheme.  The garbage collector class was added to
-* simplify and modularize the garbage collection in FTL schemes. */
+ * Brendan Tauras 2009-11-04
+ *
+ * This class is a stub class for the user to use as a template for implementing
+ * his/her garbage collector scheme.  The garbage collector class was added to
+ * simplify and modularize the garbage collection in FTL schemes. */
 
 #include "ssd.h"
+#include "util.h"
 #include <assert.h>
 #include <new>
 #include <stdio.h>
-#include "util.h"
 
 using namespace ssd;
 
-Garbage_collector::Garbage_collector(FtlParent* ftl)
-	: ftl(ftl)
-{
-	return;
-}
+Garbage_collector::Garbage_collector(FtlParent* ftl) : ftl(ftl) { return; }
 
-Garbage_collector::~Garbage_collector(void)
-{
-	return;
-}
+Garbage_collector::~Garbage_collector(void) { return; }
 
-void
-Garbage_collector::collect(const Event& evt, Address& address,
-                           const std::vector<Address>& doNotPick)
+void Garbage_collector::collect(const Event& evt, Address& address, const std::vector<Address>& doNotPick,
+                                bool replacingHotBlock)
 {
-    std::function<bool(const Address&)> ignorePred =
-        [&doNotPick](const Address &possibleVictim) {
-            return block_is_in_vector(possibleVictim, doNotPick);
+    std::function<bool(const Address&)> ignorePred = [&doNotPick](const Address& possibleVictim) {
+        return block_is_in_vector(possibleVictim, doNotPick);
     };
-    return collect(evt, address, ignorePred);
+    return collect(evt, address, ignorePred, replacingHotBlock);
 }
 
-void
-Garbage_collector::collect(const Event& evt, Address& address,
-             const std::vector<Address>& doNotPick,
-             const std::pair<Address,Address>& blockAddressRange)
+void Garbage_collector::collect(const Event& evt, Address& address, const std::vector<Address>& doNotPick,
+                                const std::pair<Address, Address>& blockAddressRange, bool replacingHotBlock)
 {
-    std::function<bool(const Address&)> ignorePred =
-        [&doNotPick, &blockAddressRange](const Address &possibleVictim) {
-            return block_is_in_vector(possibleVictim, doNotPick) or not block_is_in_plane_range(possibleVictim, blockAddressRange.first, blockAddressRange.second);
+    std::function<bool(const Address&)> ignorePred = [&doNotPick, &blockAddressRange](const Address& possibleVictim) {
+        return block_is_in_vector(possibleVictim, doNotPick) or
+               not block_is_in_plane_range(possibleVictim, blockAddressRange.first, blockAddressRange.second);
     };
-    return collect(evt, address, ignorePred);
+    return collect(evt, address, ignorePred, replacingHotBlock);
 }
 
-void
-Garbage_collector::collect(const Event& /*evt*/, Address& /*address*/,
-                           const std::function<bool(const Address&)>& /*ignorePred*/)
+void Garbage_collector::collect(const Event& /*evt*/, Address& /*address*/,
+                                const std::function<bool(const Address&)>& /*ignorePred*/, bool /*replacingHotBlock*/)
 {
     return;
 }

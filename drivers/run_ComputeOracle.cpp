@@ -16,10 +16,10 @@
 #include <string>
 #include <vector>
 
-typedef ulong LPN;
+using LPN = ssd::ulong;
 typedef std::map<LPN, int> LPNCount;
 typedef std::map<LPN, int>::iterator LPNCountIter;
-typedef std::set<LPN> HotLPNs;
+using HotLPNs = std::set<LPN>;
 
 struct LPNNum
 {
@@ -36,7 +36,7 @@ HotLPNs
 getHotLPNs(const LPNCount& count, const unsigned long frameSize,
            const double fHot)
 {
-    const unsigned long numHot =
+    const auto numHot =
       static_cast<unsigned long>(std::ceil(fHot * frameSize));
 
     // Make priority queue
@@ -48,7 +48,7 @@ getHotLPNs(const LPNCount& count, const unsigned long frameSize,
 
     // Extract numHot hottest LPNs
     HotLPNs hotLPNs;
-    for (uint it = 0; it < numHot and !Q.empty(); it++) {
+    for (ssd::uint it = 0; it < numHot and !Q.empty(); it++) {
         hotLPNs.insert(Q.top().lpn);
         Q.pop();
     }
@@ -103,7 +103,7 @@ main(int /*argc*/, char* argv[])
         // Initialise map
         for (unsigned long reqIt = startReq; reqIt < stopReq; reqIt++) {
             const LPN lpn = requests[reqIt].get_logical_address();
-            const LPNCountIter lpnIt = lpnInUse.find(lpn);
+            const auto lpnIt = lpnInUse.find(lpn);
             if (lpnIt != lpnInUse.end()) {
                 lpnIt->second = lpnIt->second + 1;
             } else {

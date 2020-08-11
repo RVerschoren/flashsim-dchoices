@@ -26,29 +26,20 @@
 
 using namespace ssd;
 
-GCImpl_CostAgeTime::GCImpl_CostAgeTime(FtlParent* ftl)
-    : Garbage_collector(ftl)
-{
-}
+GCImpl_CostAgeTime::GCImpl_CostAgeTime(FtlParent* ftl) : Garbage_collector(ftl) {}
 
-GCImpl_CostAgeTime::~GCImpl_CostAgeTime()
-{
-}
+GCImpl_CostAgeTime::~GCImpl_CostAgeTime() {}
 
-void
-GCImpl_CostAgeTime::collect(const Event& evt, Address& victimAddress,
-                            const std::function<bool(const Address&)>& ignorePred)
+void GCImpl_CostAgeTime::collect(const Event& evt, Address& victimAddress,
+                                 const std::function<bool(const Address&)>& ignorePred, bool replacingHotBlock)
 {
-	std::function<double(const Address&)> costFunc =
-	[this, &evt](const Address& addr) {
-		const Block* blockPtr = ftl->get_block(addr);
-		const double age =
-		    evt.get_start_time() - blockPtr->get_last_erase_time();
-		const double u = static_cast<double>(blockPtr->get_pages_valid()) /
-		                 static_cast<double>(BLOCK_SIZE);
+    std::function<double(const Address&)> costFunc = [this, &evt](const Address& addr) {
+        const Block* blockPtr = ftl->get_block(addr);
+        const double age = evt.get_start_time() - blockPtr->get_last_erase_time();
+        const double u = static_cast<double>(blockPtr->get_pages_valid()) / static_cast<double>(BLOCK_SIZE);
         const double CT = blockPtr->get_erase_count();
         return ((1.0 - u) * age) / (u * CT); // Largest cost is smallest benefit
-	};
+    };
 
-	greedy_block(victimAddress, costFunc, ignorePred);
+    greedy_block_same_plane(victimAddress, costFunc, ignorePred);
 }

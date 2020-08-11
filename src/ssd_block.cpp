@@ -31,35 +31,24 @@
 
 using namespace ssd;
 
-Block::Block(const Plane& parent, uint block_size, ulong erases_remaining,
-             double erase_delay, long physical_address)
-	: physical_address(physical_address)
-	, pages_invalid(0U)
-	, size(block_size)
-	,
+Block::Block(const Plane& parent, uint block_size, ulong erases_remaining, double erase_delay, long physical_address)
+    : physical_address(physical_address), pages_invalid(0U), size(block_size),
 
 	  /* use a const pointer (Page * const data) to use as an array
 	   * but like a reference, we cannot reseat the pointer */
-	  data((Page*)malloc(block_size * sizeof(Page)))
-	, parent(parent)
-	, pages_valid(0)
-	,
+      data((Page*)malloc(block_size * sizeof(Page))), parent(parent), pages_valid(0),
 
-	  state(FREE)
-	,
+      state(FREE),
 
+	  /* constant to compute number of erases */
+      max_erases(erases_remaining),
 	  /* set erases remaining to BLOCK_ERASES to match Block constructor args
 	   * in Plane class
 	   * this is the cheap implementation but can change to pass through classes */
-	  erases_remaining(erases_remaining)
-	,
-      max_erases(erases_remaining)
-    ,
+      erases_remaining(erases_remaining),
 
 	  /* assume hardware created at time 0 and had an implied free erasure */
-	  last_erase_time(0.0)
-	, erase_delay(erase_delay)
-	,
+      last_erase_time(0.0), erase_delay(erase_delay),
 
 	  modification_time(-1)
 
@@ -67,9 +56,10 @@ Block::Block(const Plane& parent, uint block_size, ulong erases_remaining,
 	uint i;
 
 	if (erase_delay < 0.0) {
-		fprintf(stderr, "Block warning: %s: constructor received negative "
-		        "erase delay value\n\tsetting erase delay to 0.0\n",
-		        __func__);
+        fprintf(stderr,
+                "Block warning: %s: constructor received negative "
+				"erase delay value\n\tsetting erase delay to 0.0\n",
+				__func__);
 		erase_delay = 0.0;
 	}
 
@@ -81,9 +71,7 @@ Block::Block(const Plane& parent, uint block_size, ulong erases_remaining,
 	/* array allocated in initializer list:
 	 * data = (Page *) malloc(size * sizeof(Page)); */
 	if (data == NULL) {
-		fprintf(stderr,
-		        "Block error: %s: constructor unable to allocate Page data\n",
-		        __func__);
+        fprintf(stderr, "Block error: %s: constructor unable to allocate Page data\n", __func__);
 		exit(MEM_ERR);
 	}
 	for (i = 0; i < size; i++) {
@@ -110,20 +98,19 @@ Block::~Block(void)
 	return;
 }
 
-enum status
-Block::read(Event& event) {
+enum status Block::read(Event& event)
+{
 	assert(data != NULL);
 	return data[event.get_address().page]._read(event);
 }
 
-enum status
-Block::write(Event& event) {
+enum status Block::write(Event& event)
+{
 	assert(data != NULL);
 	enum status ret = data[event.get_address().page]._write(event);
 
 #ifndef NO_NOOP
-	if (event.get_noop() == false)
-	{
+    if (event.get_noop() == false) {
 #endif
 		pages_valid++;
 #ifndef NO_BLOCK_STATE
@@ -141,9 +128,9 @@ Block::write(Event& event) {
 	return ret;
 }
 
-enum status
-Block::replace(Event& event) {
-    invalidate_page(event.get_replace_address().page, event.get_start_time() + event.get_time_taken() );
+enum status Block::replace(Event& event)
+{
+    invalidate_page(event.get_replace_address().page, event.get_start_time() + event.get_time_taken());
 	return SUCCESS;
 }
 
@@ -151,47 +138,47 @@ Block::replace(Event& event) {
  * sets Page statuses to EMPTY
  * updates last_erase_time and erases_remaining
  * returns 1 for success, 0 for failure */
-enum status
-Block::_erase(Event& event) {
+enum status Block::_erase(Event& event)
+{
 	assert(data != NULL && erase_delay >= 0.0);
 	uint i;
+    /// TODO Re-enable?
+    //	if (!event.get_noop())
+    //	{
+    if (erases_remaining < 1) {
+        fprintf(stderr, "Block error: %s: No erases remaining when attempting to erase\n", __func__);
+        return FAILURE;
+    }
 
-	if (!event.get_noop())
-	{
-		if (erases_remaining < 1) {
-			fprintf(
-			    stderr,
-			    "Block error: %s: No erases remaining when attempting to erase\n",
-			    __func__);
-			return FAILURE;
-		}
+    for (i = 0; i < size; i++) {
+        // assert(data[i].get_state() == INVALID);
+        data[i].set_state(EMPTY);
+    }
 
-		for (i = 0; i < size; i++) {
-			// assert(data[i].get_state() == INVALID);
-			data[i].set_state(EMPTY);
-		}
-
-		event.incr_time_taken(erase_delay);
-		last_erase_time = event.get_start_time() + event.get_time_taken();
-        erases_remaining--;
-		pages_valid = 0;
-		pages_invalid = 0;
-		state = FREE;
+    event.incr_time_taken(erase_delay);
+    last_erase_time = event.get_start_time() + event.get_time_taken();
+    erases_remaining--;
+    pages_valid = 0;
+    pages_invalid = 0;
+    state = FREE;
 
 #ifndef NOT_USE_BLOCKMGR
-		Block_manager::instance()->update_block(this);
+    Block_manager::instance()->update_block(this);
 #endif
-	}
+    //	} // !event.get_noop()
 
 	return SUCCESS;
 }
 
-enum status
-Block::_erase_and_copy(
-    Event& event, Address& copyBlockAddr, Block* copyBlockPtr,
-    std::function<void(const ulong, const Address&)> modifyFTL,
-    std::function<void(const ulong, const uint pageNr)> modifyFTLPage) {
-#ifdef DEBUG
+enum status Block::_erase_and_copy(Event& event, const Address& copyBlockAddrIn, Block* copyBlockPtr,
+                                   std::function<void(const ulong, const Address&)> modifyFTL,
+                                   std::function<void(const ulong, const uint pageNr)> modifyFTLPage)
+{
+    /// TODO Is this OK?
+    /// BUG Is this OK?
+    /// FIXME Is this OK?
+    Address copyBlockAddr{copyBlockAddrIn};
+#ifndef NDEBUG
 	assert(copyBlockPtr != this);
 	assert(data != NULL && erase_delay >= 0.0);
 	const uint prevalid1 = copyBlockPtr->get_pages_valid();
@@ -199,12 +186,8 @@ Block::_erase_and_copy(
 	const uint preValids = prevalid1 + prevalid2;
 #endif
 
-	if (erases_remaining < 1)
-	{
-		fprintf(
-		    stderr,
-		    "Block error: %s: No erases remaining when attempting to erase\n",
-		    __func__);
+    if (erases_remaining < 1) {
+        fprintf(stderr, "Block error: %s: No erases remaining when attempting to erase\n", __func__);
 		return FAILURE;
 	}
 
@@ -217,16 +200,14 @@ Block::_erase_and_copy(
 
 	// Read valid lpns
 	std::vector<ulong> lpns;
-	for (uint i = 0; i < size; i++)
-	{
+    for (uint i = 0; i < size; i++) {
 		if (data[i].get_state() == VALID) {
-            data[i]._read(event); // Must read data to copy them to other/this block later
+			data[i]._read(event); // Must read data to copy them to other/this block later
 			lpns.push_back(data[i].get_logical_address());
 		}
 		data[i].set_state(EMPTY);
 	}
-	for (const ulong lpn : lpns)
-	{
+    for (const ulong lpn : lpns) {
 		if (copyBlockPtr->get_next_page(copyPage) == SUCCESS) {
 			copyBlockPtr->data[copyPage]._write(event, lpn);
 			copyBlockPtr->pages_valid++;
@@ -235,7 +216,7 @@ Block::_erase_and_copy(
 #endif
 			copyBlockAddr.page = copyPage;
 			modifyFTL(lpn, copyBlockAddr);
-			/// TODO After modifyFTL so modifyFTL can still reference old state
+			/// NOTE After modifyFTL so modifyFTL can still reference old state
 			// data[i].set_state(EMPTY);
 		} else {
 			uint first_empty = 0;
@@ -258,7 +239,7 @@ Block::_erase_and_copy(
 #ifndef NOT_USE_BLOCKMGR
 	Block_manager::instance()->update_block(this);
 #endif
-#ifdef DEBUG
+#ifndef NDEBUG
 	const uint postvalid1 = copyBlockPtr->get_pages_valid();
 	const uint postvalid2 = get_pages_valid();
 	const uint postValids = postvalid1 + postvalid2;
@@ -267,53 +248,65 @@ Block::_erase_and_copy(
 	return SUCCESS;
 }
 
-std::vector<ulong>
-Block::_read_logical_addresses_and_data(Event& event, const Block* block)
+std::vector<ulong> Block::_read_logical_addresses_and_data(Event& event) const
 {
-	assert(block->data != NULL);
-	std::vector<ulong> lpns;
-	for (uint i = 0; i < block->size; i++) {
-        if (block->data[i].get_state() == VALID) {
-            block->data[i]._read(event);
-			const ulong lpn = block->data[i].get_logical_address();
-			lpns.push_back(lpn);
+	assert(this->data != NULL);
+	std::vector<ulong> lpns(this->get_pages_valid());
+	uint lpnIter = 0;
+	for (uint i = 0; i < this->size; i++) {
+		if (this->data[i].get_state() == VALID) {
+			this->data[i]._read(event);
+			const ulong lpn = this->data[i].get_logical_address();
+			lpns.at(lpnIter) = lpn;
+			lpnIter++;
 		}
 	}
-	assert(lpns.size() == block->get_pages_valid());
+	assert(lpns.size() == this->get_pages_valid());
 	return lpns;
 }
 
-enum status
-Block::_swap(FtlParent* ftl, Event& event, const Address& block1,
-             const Address& block2,
-             std::function<void(const ulong, const Address&)> modifyFTL) {
+///@TODO Delete
+/// std::vector<ulong>
+/// Block::_set(Event& event)
+///{
+///	assert(block->data != NULL);
+///	std::vector<ulong> lpns;
+///	for (uint i = 0; i < block->size; i++) {
+///		if (block->data[i].get_state() == VALID) {
+///			block->data[i]._read(event);
+///			const ulong lpn = block->data[i].get_logical_address();
+///			lpns.push_back(lpn);
+///		}
+///	}
+///	assert(lpns.size() == block->get_pages_valid());
+///	return lpns;
+///}
+
+enum status Block::_swap(FtlParent* ftl, Event& event, const Address& block1, const Address& block2,
+                         std::function<void(const ulong, const Address&)> modifyFTL)
+{
 	Block* block1Ptr = ftl->get_block(block1);
 	assert(block1Ptr->data != NULL && block1Ptr->erase_delay >= 0.0);
 	Block* block2Ptr = ftl->get_block(block2);
 	assert(block2Ptr->data != NULL && block2Ptr->erase_delay >= 0.0);
 
-	if (block1Ptr->erases_remaining < 1 or block2Ptr->erases_remaining < 1)
-	{
-		fprintf(
-		    stderr,
-		    "Block error: %s: No erases remaining when attempting to erase\n",
-		    __func__);
+    if (block1Ptr->erases_remaining < 1 || block2Ptr->erases_remaining < 1) {
+        fprintf(stderr, "Block error: %s: No erases remaining when attempting to erase\n", __func__);
 		return FAILURE;
 	}
 	// Read original lpn from event since we will overwrite it
 	const ulong origLpn = event.get_logical_address();
 	const Address origAddress = event.get_address();
 
-    /// Read contents from blocks
-    std::vector<ulong> block1Contents = _read_logical_addresses_and_data(event, block1Ptr);
+	/// Read contents from blocks
+	std::vector<ulong> block1Contents = block1Ptr->_read_logical_addresses_and_data(event);
 	const bool block1Hotness = block1Ptr->get_block_hotness();
-    std::vector<ulong> block2Contents = _read_logical_addresses_and_data(event, block2Ptr);
+	std::vector<ulong> block2Contents = block2Ptr->_read_logical_addresses_and_data(event);
 	const bool block2Hotness = block2Ptr->get_block_hotness();
 
 	/// Copy from block 1 to block 2
 	block1Ptr->_erase(event);
-	for (const ulong& lpn : block2Contents)
-	{
+    for (const ulong& lpn : block2Contents) {
 		Address writeAddr(block1);
 		block1Ptr->get_next_page(writeAddr);
 		event.set_address(writeAddr);
@@ -321,10 +314,7 @@ Block::_swap(FtlParent* ftl, Event& event, const Address& block1,
 		if (block1Ptr->write(event) == SUCCESS) {
 			modifyFTL(lpn, writeAddr);
 		} else {
-			fprintf(
-			    stderr,
-			    "Block error: %s: Write failed when attempting to swap blocks\n",
-			    __func__);
+            fprintf(stderr, "Block error: %s: Write failed when attempting to swap blocks\n", __func__);
 			return FAILURE;
 		}
 	}
@@ -336,8 +326,7 @@ Block::_swap(FtlParent* ftl, Event& event, const Address& block1,
 
 	/// Copy from block 2 to block 1
 	block2Ptr->_erase(event);
-	for (const ulong& lpn : block1Contents)
-	{
+    for (const ulong& lpn : block1Contents) {
 		Address writeAddr(block2);
 		block2Ptr->get_next_page(writeAddr);
 		event.set_address(writeAddr);
@@ -345,10 +334,7 @@ Block::_swap(FtlParent* ftl, Event& event, const Address& block1,
 		if (block2Ptr->write(event) == SUCCESS) {
 			modifyFTL(lpn, writeAddr);
 		} else {
-			fprintf(
-			    stderr,
-			    "Block error: %s: Write failed when attempting to swap blocks\n",
-			    __func__);
+            fprintf(stderr, "Block error: %s: Write failed when attempting to swap blocks\n", __func__);
 			return FAILURE;
 		}
 	}
@@ -365,80 +351,44 @@ Block::_swap(FtlParent* ftl, Event& event, const Address& block1,
 	return SUCCESS;
 }
 
-const Plane&
-Block::get_parent(void) const
-{
-	return parent;
-}
+const Plane& Block::get_parent(void) const { return parent; }
 
-ssd::uint
-Block::get_pages_valid(void) const
-{
-	return pages_valid;
-}
+ssd::uint Block::get_pages_valid(void) const { return pages_valid; }
 
-ssd::uint
-Block::get_pages_invalid(void) const
-{
-	return pages_invalid;
-}
+ssd::uint Block::get_pages_invalid(void) const { return pages_invalid; }
 
-ssd::uint
-Block::get_pages_empty(void) const
+ssd::uint Block::get_pages_empty(void) const
 {
 	const uint empty = size - pages_invalid - pages_valid;
 	assert(empty <= size);
 	return empty;
 }
 
-enum block_state
-Block::get_state(void) const {
-	return state;
-}
+enum block_state Block::get_state(void) const { return state; }
 
-enum page_state
-Block::get_state(uint page) const {
+enum page_state Block::get_state(uint page) const
+{
 	assert(data != NULL && page < size);
 	return data[page].get_state();
 }
 
-enum page_state
-Block::get_state(const Address& address) const {
+enum page_state Block::get_state(const Address& address) const
+{
 	assert(data != NULL && address.page < size && address.valid >= BLOCK);
 	return data[address.page].get_state();
 }
 
-double
-Block::get_last_erase_time(void) const
-{
-    return last_erase_time;
-}
+double Block::get_last_erase_time(void) const { return last_erase_time; }
 
-double Block::get_last_page_invalidate_time(void) const
-{
-    return last_page_invalidate_time;
-}
+double Block::get_last_page_invalidate_time(void) const { return last_page_invalidate_time; }
 
-ssd::ulong
-Block::get_erase_count(void) const
-{
-    return max_erases - erases_remaining;
-}
+ssd::ulong Block::get_erase_count(void) const { return max_erases - erases_remaining; }
 
-ssd::ulong
-Block::get_erases_remaining(void) const
-{
-	return erases_remaining;
-}
+ssd::ulong Block::get_erases_remaining(void) const { return erases_remaining; }
 
-ssd::uint
-Block::get_size(void) const
-{
-	return size;
-}
+ssd::uint Block::get_size(void) const { return size; }
 
-void
-Block::invalidate_page(uint page, const double time)
+void Block::invalidate_page(uint page, const double time)
 {
 	assert(page < size);
 
@@ -449,7 +399,7 @@ Block::invalidate_page(uint page, const double time)
 		pages_valid--;
 	pages_invalid++;
 	data[page].set_state(INVALID);
-    last_page_invalidate_time = time;
+	last_page_invalidate_time = time;
 
 #ifndef NOT_USE_BLOCKMGR
 	Block_manager::instance()->update_block(this);
@@ -468,22 +418,20 @@ Block::invalidate_page(uint page, const double time)
 }
 
 ///@TODO Remove
-///double
-///Block::get_modification_time(void) const
+/// double
+/// Block::get_modification_time(void) const
 ///{
 ///	return modification_time;
 ///}
 
 /* method to find the next usable (empty) page in this block
  * method is called by write and erase methods and in Plane::get_next_page() */
-enum status
-Block::get_next_page(Address& address) const {
-	for (uint i = 0; i < size; i++)
-	{
+enum status Block::get_next_page(Address& address) const
+{
+    for (uint i = 0; i < size; i++) {
 		if (data[i].get_state() == EMPTY) {
 #ifndef NOT_USE_BLOCKMGR
-			address.set_linear_address(
-			    i + physical_address - physical_address % BLOCK_SIZE, PAGE);
+            address.set_linear_address(i + physical_address - physical_address % BLOCK_SIZE, PAGE);
 #endif
 			address.page = i;
 			address.valid = PAGE;
@@ -493,14 +441,12 @@ Block::get_next_page(Address& address) const {
 	return FAILURE;
 }
 
-enum status
-Block::get_next_page(uint& pageNr) const {
-	for (uint i = 0; i < size; i++)
-	{
+enum status Block::get_next_page(uint& pageNr) const
+{
+    for (uint i = 0; i < size; i++) {
 		if (data[i].get_state() == EMPTY) {
 #ifndef NOT_USE_BLOCKMGR
-			address.set_linear_address(
-			    i + physical_address - physical_address % BLOCK_SIZE, PAGE);
+            address.set_linear_address(i + physical_address - physical_address % BLOCK_SIZE, PAGE);
 #endif
 			pageNr = i;
 			return SUCCESS;
@@ -509,46 +455,21 @@ Block::get_next_page(uint& pageNr) const {
 	return FAILURE;
 }
 
-long
-Block::get_physical_address(void) const
-{
-	return physical_address;
-}
+long Block::get_physical_address(void) const { return physical_address; }
 
-Page*
-Block::get_page_pointer(const Address& addr)
+Page* Block::get_page_pointer(const Address& addr)
 {
 	assert(addr.valid >= PAGE);
 	assert(addr.page < BLOCK_SIZE);
 	return data[addr.page].get_pointer();
 }
 
-Block*
-Block::get_pointer(void)
-{
-	return this;
-}
+Block* Block::get_pointer(void) { return this; }
 
-block_type
-Block::get_block_type(void) const
-{
-	return this->btype;
-}
+block_type Block::get_block_type(void) const { return this->btype; }
 
-void
-Block::set_block_type(block_type value)
-{
-	this->btype = value;
-}
+void Block::set_block_type(block_type value) { this->btype = value; }
 
-void
-Block::set_block_hotness(const bool isHot)
-{
-	this->isHot = isHot;
-}
+void Block::set_block_hotness(const bool isHot) { this->isHot = isHot; }
 
-bool
-Block::get_block_hotness() const
-{
-	return this->isHot;
-}
+bool Block::get_block_hotness() const { return this->isHot; }

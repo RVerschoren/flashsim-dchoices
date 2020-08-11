@@ -40,6 +40,7 @@
 
 using namespace ssd;
 
+#ifndef NOT_USE_BLOCKMGR
 FtlImpl_Dftl::FtlImpl_Dftl(Controller& controller)
 	: FtlImpl_DftlParent(controller)
 {
@@ -232,3 +233,4 @@ FtlImpl_Dftl::print_ftl_statistics()
 {
 	Block_manager::instance()->print_statistics();
 }
+#endif

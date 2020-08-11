@@ -16,6 +16,9 @@
 #include <string>
 #include <vector>
 
+using ssd::uint;
+using ssd::ulong;
+
 typedef ulong LPN;
 typedef std::map<LPN, uint> LPNCount;
 typedef std::map<LPN, uint>::iterator LPNCountIter;
@@ -74,7 +77,7 @@ getFracReadOnly(const IOEvents& events, const ulong numLPN)
     std::vector<bool> readOnly(numLPN, true);
     ulong numReadOnly = numLPN; // 0 -> maxLPN
     for (const ssd::IOEvent& evt : events) {
-        if (evt.type == ssd::WRITE and readOnly[evt.lpn]) {
+        if (evt.type == ssd::WRITE && readOnly[evt.lpn]) {
             readOnly[evt.lpn] = false;
             numReadOnly--;
         }
@@ -143,7 +146,7 @@ main(int /*argc*/, char* argv[])
         ulong numHot = 0UL;
         for (IOEvent& evt : events) {
             const LPN newLPN = map[evt.lpn];
-            if (newLPN <= maxHotLPN and evt.type == ssd::WRITE) {
+            if (newLPN <= maxHotLPN && evt.type == ssd::WRITE) {
                 numHot++;
             }
         }

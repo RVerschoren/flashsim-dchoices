@@ -26,23 +26,13 @@
 
 using namespace ssd;
 
-GCImpl_DChoices::GCImpl_DChoices(FtlParent* ftl, const uint d)
-	: Garbage_collector(ftl)
-	, d(d)
-	, FIFOCounter(0)
-{
-}
+GCImpl_DChoices::GCImpl_DChoices(FtlParent* ftl, const uint d) : Garbage_collector(ftl), d(d) {}
 
-GCImpl_DChoices::~GCImpl_DChoices()
-{
-}
+GCImpl_DChoices::~GCImpl_DChoices() {}
 
-void
-GCImpl_DChoices::collect(const Event& /*evt*/, Address& victimAddress,
-                         const std::function<bool(const Address&)>& ignorePred)
+void GCImpl_DChoices::collect(const Event& /*evt*/, Address& victimAddress,
+                              const std::function<bool(const Address&)>& ignorePred, bool replacingHotBlock)
 {
-	std::function<uint(const Address&)> costFunc = [this](const Address& addr) {
-		return ftl->get_pages_valid(addr);
-	};
-	d_choices_block(d, victimAddress, costFunc, ignorePred);
+    std::function<uint(const Address&)> validPages = [this](const Address& addr) { return ftl->get_pages_valid(addr); };
+    d_choices_block_same_plane(d, victimAddress, validPages, ignorePred);
 }

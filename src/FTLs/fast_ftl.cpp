@@ -31,7 +31,7 @@
 #include <vector>
 
 using namespace ssd;
-
+#ifndef NOT_USE_BLOCKMGR
 FtlImpl_Fast::FtlImpl_Fast(Controller& controller)
 	: FtlParent(controller)
 {
@@ -671,3 +671,4 @@ FtlImpl_Fast::print_ftl_statistics()
 {
 	Block_manager::instance()->print_statistics();
 }
+#endif

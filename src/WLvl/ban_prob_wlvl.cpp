@@ -30,46 +30,24 @@
 
 using namespace ssd;
 
-WLvlImpl_Ban_Prob::WLvlImpl_Ban_Prob(FtlParent* ftl, const double p, const uint d)
-	: Wear_leveler(ftl)
-	, p(p)
-    , d(d)
-{
-}
+WLvlImpl_Ban_Prob::WLvlImpl_Ban_Prob(FtlParent* ftl, const double p, const uint d) : Wear_leveler(ftl), p(p), d(d) {}
 
-WLvlImpl_Ban_Prob::~WLvlImpl_Ban_Prob()
-{
-}
+WLvlImpl_Ban_Prob::~WLvlImpl_Ban_Prob() {}
 
-enum status
-WLvlImpl_Ban_Prob::suggest_WF(Address& WFSuggestion,
-                              const std::vector<Address>& doNotPick) {
-	if (RandNrGen::get() < p)   // Pick a random block
+enum status WLvlImpl_Ban_Prob::suggest_WF(Event& /*evt*/, Address& WFSuggestion, Controller& /*controller*/,
+                                          const std::vector<Address>& doNotPick)
+{
+
+    while (RandNrGen::get() < p) // Pick a random block
 	{
-		/// TODO Remove commented part
-		/*       do {
-		#ifndef SINGLE_PLANE
-		           WFSuggestion.package = RandNrGen::get(SSD_SIZE);
-		           WFSuggestion.die = RandNrGen::get(PACKAGE_SIZE);
-		           WFSuggestion.plane = RandNrGen::get(DIE_SIZE);
-		#endif
-		           WFSuggestion.block = RandNrGen::get(PLANE_SIZE);
-		       } while (is_WF_victim(FTL->get_block_pointer(WFSuggestion),
-		doNotPick));*/
-		std::function<bool(const Address&)> ignorePred = [this, &doNotPick](
-		const Address& addr) {
-			return block_is_in_vector(addr, doNotPick);
-		};
-        ///@TODO Remove random_block(WFSuggestion, ignorePred);
-        std::function<uint(const Address&)> costFunc = [this](const Address& addr) {
+        std::function<bool(const Address&)> ignorePred = [&doNotPick](const Address& addr) {
+            return block_is_in_vector(addr, doNotPick);
+        };
+        std::function<uint(const Address&)> validPages = [this](const Address& addr) {
             return FTL->get_pages_valid(addr);
         };
-        d_choices_block(d, WFSuggestion, costFunc, ignorePred);
-#ifdef DEBUG
-		std::cout << "INSERTED BAN PROB at" << FTL->controller.stats.numGCErase
-		          << std::endl;
-#endif
-		return SUCCESS;
+        d_choices_block_same_plane(d, WFSuggestion, validPages, ignorePred);
+        return SUCCESS;
 	}
-	return FAILURE;
+    return FAILURE;
 }

@@ -7,11 +7,10 @@
 
 using namespace ssd;
 
-int
-main(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     load_config();
-    const SSD_Run_Params params = setup_synth(argc, argv);
+    const SSD_Run_Params params = setup_synth(argc, argv, WL_NONE);
     run_synth(params);
     return 0;
 }

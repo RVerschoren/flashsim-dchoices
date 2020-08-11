@@ -43,7 +43,7 @@ Wear_leveler::~Wear_leveler(void)
 }
 
 enum status
-Wear_leveler::suggest_WF(Address&, const std::vector<Address>&) {
+Wear_leveler::suggest_WF(Event&, Address&, Controller&, const std::vector<Address>&) {
 	// No wear leveling done
 	return FAILURE;
 }

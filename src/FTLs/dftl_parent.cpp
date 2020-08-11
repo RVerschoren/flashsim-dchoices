@@ -40,7 +40,7 @@
 #include <vector>
 
 using namespace ssd;
-
+#ifndef NOT_USE_BLOCKMGR
 FtlImpl_DftlParent::MPage::MPage(long vpn)
 {
 	this->vpn = vpn;
@@ -306,3 +306,4 @@ FtlImpl_DftlParent::update_translation_map(FtlImpl_DftlParent::MPage& mpage,
 	mpage.ppn = ppn;
 	reverse_trans_map[ppn] = mpage.vpn;
 }
+#endif

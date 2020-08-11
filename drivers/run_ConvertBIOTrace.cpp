@@ -16,17 +16,17 @@
 #include <string>
 #include <vector>
 
-typedef ulong LPN;
-typedef std::map<LPN, uint> LPNCount;
-typedef std::map<LPN, uint>::iterator LPNCountIter;
+using LPN = ssd::ulong;
+typedef std::map<LPN, ssd::uint> LPNCount;
+typedef std::map<LPN, ssd::uint>::iterator LPNCountIter;
 typedef std::map<LPN, LPN>
   LPNMap; // Maps old LPNs (first) to new LPNs (second in pair)
 
 struct LPNNum
 {
     LPN lpn;
-    uint num;
-    LPNNum(const LPN& l, const uint numberOfAppearances)
+    ssd::uint num;
+    LPNNum(const LPN& l, const ssd::uint numberOfAppearances)
       : lpn(l)
       , num(numberOfAppearances)
     {
@@ -46,7 +46,7 @@ getNewLPNs(const LPNCount& count)
 
     // Extract numHot hottest LPNs
     LPNMap map;
-    ulong it = 0;
+    ssd::ulong it = 0;
     while (!Q.empty()) {
         map[Q.top().lpn] = it++;
         Q.pop();

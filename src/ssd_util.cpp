@@ -1,3 +1,4 @@
+
 /* Copyright 2017 Robin Verschoren */
 
 /* ssd_util.cpp */
@@ -21,14 +22,16 @@
  */
 
 #include "ssd.h"
+#include <algorithm>
+#include <cassert>
+#include <iostream>
 #include <limits>
-#include <boost/algorithm/string.hpp>
+#include <vector>
 
 using namespace ssd;
 
-bool
-ssd::block_is_in_plane_range(const Address& block,
-                        const Address& beginBlockAddress, const Address& endBlockAddress)
+bool ssd::block_is_in_plane_range(const Address& block, const Address& beginBlockAddress,
+								  const Address& endBlockAddress)
 {
 	assert(beginBlockAddress.compare(endBlockAddress) >= PLANE); // In same plane
 	if (beginBlockAddress.block <= block.block and block.block <= endBlockAddress.block) {
@@ -37,9 +40,7 @@ ssd::block_is_in_plane_range(const Address& block,
 	return false;
 }
 
-bool
-ssd::block_is_in_vector(const Address& block,
-                        const std::vector<Address>& vector)
+bool ssd::block_is_in_vector(const Address& block, const std::vector<Address>& vector)
 {
 	for (const Address& b : vector) {
 		if (block.compare(b) >= BLOCK) {
@@ -49,8 +50,7 @@ ssd::block_is_in_vector(const Address& block,
 	return false;
 }
 
-bool
-ssd::block_is_in_vector(const Block* block, const std::vector<Block*>& vector)
+bool ssd::block_is_in_vector(const Block* block, const std::vector<Block*>& vector)
 {
 	for (const Block* b : vector) {
 		if (block == b) {
@@ -60,59 +60,38 @@ ssd::block_is_in_vector(const Block* block, const std::vector<Block*>& vector)
 	return false;
 }
 
-void
-ssd::random_block(Address& victimAddress)
+void ssd::random_block(Address& victimAddress)
 {
 	assert(victimAddress.check_valid() >= BLOCK);
 	Address address(victimAddress);
 
-#ifndef SINGLE_PLANE
 	address.package = RandNrGen::get(SSD_SIZE);
 	address.die = RandNrGen::get(PACKAGE_SIZE);
 	address.plane = RandNrGen::get(DIE_SIZE);
-#else
-	address.package = 0;
-	address.die = 0;
-	address.plane = 0;
-#endif
 	address.block = RandNrGen::get(PLANE_SIZE);
 	assert(address.check_valid() >= BLOCK);
 
 	victimAddress = address;
 }
 
-void
-ssd::random_block(Address& victimAddress, const std::vector<Address>& doNotPick)
+void ssd::random_block(Address& victimAddress, const std::vector<Address>& doNotPick)
 {
-    assert(victimAddress.check_valid() >= BLOCK);
-	/// TODO crashes here?
+	assert(victimAddress.check_valid() >= BLOCK);
+	/// BUG crashes here?
 	Address address(0, 0, 0, 0, 0, PAGE);
 	do {
-#ifndef SINGLE_PLANE
 		address.package = RandNrGen::get(SSD_SIZE);
 		address.die = RandNrGen::get(PACKAGE_SIZE);
 		address.plane = RandNrGen::get(DIE_SIZE);
-#else
-		address.package = 0;
-		address.die = 0;
-		address.plane = 0;
-#endif
 		address.block = RandNrGen::get(PLANE_SIZE);
 		assert(address.package < SSD_SIZE);
 		assert(address.die < PACKAGE_SIZE);
 		assert(address.plane < DIE_SIZE);
 		assert(address.block < PLANE_SIZE);
-#ifdef DEBUG
-		std::cout << address.package << " " << SSD_SIZE << std::endl;
-		std::cout << address.die << " " << PACKAGE_SIZE << std::endl;
-		std::cout << address.plane << " " << DIE_SIZE << std::endl;
-		std::cout << address.block << " " << PLANE_SIZE << std::endl;
-#endif
-
 	} while (block_is_in_vector(address, doNotPick));
 	victimAddress = address;
 
-#ifdef DEBUG
+#ifndef NDEBUG
 	assert(victimAddress.check_valid() >= BLOCK);
 	const bool isDNP1 = address.same_block(doNotPick[0]);
 	const bool isDNP2 = address.same_block(doNotPick[1]);
@@ -120,29 +99,21 @@ ssd::random_block(Address& victimAddress, const std::vector<Address>& doNotPick)
 #endif
 }
 
-void
-ssd::random_block(Address& victimAddress,
-                  const std::function<bool(const Address&)>& ignored)
+void ssd::random_block(Address& victimAddress, const std::function<bool(const Address&)>& ignored)
 {
-    assert(victimAddress.check_valid() >= BLOCK);
-	/// TODO crashes here?
+	assert(victimAddress.check_valid() >= BLOCK);
+	/// BUG crashes here?
 	Address address(0, 0, 0, 0, 0, PAGE);
 	do {
-#ifndef SINGLE_PLANE
 		address.package = RandNrGen::get(SSD_SIZE);
 		address.die = RandNrGen::get(PACKAGE_SIZE);
 		address.plane = RandNrGen::get(DIE_SIZE);
-#else
-		address.package = 0;
-		address.die = 0;
-		address.plane = 0;
-#endif
 		address.block = RandNrGen::get(PLANE_SIZE);
 		assert(address.package < SSD_SIZE);
 		assert(address.die < PACKAGE_SIZE);
 		assert(address.plane < DIE_SIZE);
 		assert(address.block < PLANE_SIZE);
-#ifdef DEBUG
+#ifndef NDEBUG
 		std::cout << address.package << " " << SSD_SIZE << std::endl;
 		std::cout << address.die << " " << PACKAGE_SIZE << std::endl;
 		std::cout << address.plane << " " << DIE_SIZE << std::endl;
@@ -153,81 +124,41 @@ ssd::random_block(Address& victimAddress,
 	victimAddress = address;
 	assert(victimAddress.check_valid() >= BLOCK);
 	assert(not ignored(address));
-	/// TODO Remove
+	/// FIXME Remove
 	victimAddress.valid = PAGE;
 }
-
-void
-ssd::d_choices_block(const unsigned int d, Address& victimAddress,
-                     const std::function<uint(const Address&)>& cost,
-                     const std::function<bool(const Address&)>& ignored)
+/// TODO Remove
+/*void ssd::d_choices_block(const unsigned int d, Address& victimAddress, const std::function<uint(const Address&)>&
+cost, const std::function<bool(const Address&)>& ignored)
 {
-    do {
+	do {
 		Address address(victimAddress);
 
 		uint minCost = std::numeric_limits<uint>::max();
 		for (uint i = 0; i < d; i++) {
-#ifndef SINGLE_PLANE
+
 			address.package = RandNrGen::get(SSD_SIZE);
 			address.die = RandNrGen::get(PACKAGE_SIZE);
 			address.plane = RandNrGen::get(DIE_SIZE);
-#else
-			address.package = 0;
-			address.die = 0;
-			address.plane = 0;
-#endif
+
 			address.block = RandNrGen::get(PLANE_SIZE);
 			assert(address.check_valid() >= BLOCK);
 
 			const uint blockCost = cost(address);
-            if (blockCost < minCost) {
+			if (blockCost < minCost) {
 				minCost = blockCost;
 				victimAddress = address;
 			}
 		}
-    } while (ignored(victimAddress));
-/*
-    bool foundNotIgnored = false;
-    do {
-        Address address(victimAddress);
-        std::vector<Address> possibleVictims(d);
-        uint minCost = std::numeric_limits<uint>::max();
-        for (uint i = 0; i < d; i++) {
-#ifndef SINGLE_PLANE
-            address.package = RandNrGen::get(SSD_SIZE);
-            address.die = RandNrGen::get(PACKAGE_SIZE);
-            address.plane = RandNrGen::get(DIE_SIZE);
-#else
-            address.package = 0;
-            address.die = 0;
-            address.plane = 0;
-#endif
-            address.block = RandNrGen::get(PLANE_SIZE);
-            assert(address.check_valid() >= BLOCK);
-            possibleVictims[i] = address;
-        }
-        for(const Address& posVic : possibleVictims){
-            if(not ignored(posVic)){
-                foundNotIgnored = true;
-                const uint blockCost = cost(posVic);
-                if (blockCost < minCost){
-                    minCost = blockCost;
-                    victimAddress = posVic;
-                }
-            }
-        }
-    } while (not foundNotIgnored);*/
+	} while (ignored(victimAddress));
 }
 
-void
-ssd::greedy_block(Address& victimAddress,
-                  const std::function<uint(const Address&)>& cost,
-                  const std::function<bool(const Address&)>& ignored)
+void ssd::greedy_block(Address& victimAddress, const std::function<uint(const Address&)>& cost,
+					   const std::function<bool(const Address&)>& ignored)
 {
 	Address address(victimAddress);
 
 	uint minCost = std::numeric_limits<uint>::max();
-#ifndef SINGLE_PLANE
 	for (uint package = 0; package < SSD_SIZE; package++) {
 		address.package = package;
 		for (uint die = 0; die < PACKAGE_SIZE; die++) {
@@ -235,7 +166,6 @@ ssd::greedy_block(Address& victimAddress,
 			for (uint plane = 0; plane < DIE_SIZE; plane++) {
 				address.plane = plane;
 				assert(address.check_valid() >= PLANE);
-#endif
 				for (uint block = 0; block < PLANE_SIZE; block++) {
 					address.block = block;
 					assert(address.check_valid() >= BLOCK);
@@ -248,23 +178,18 @@ ssd::greedy_block(Address& victimAddress,
 						}
 					}
 				}
-#ifndef SINGLE_PLANE
 			}
 		}
 	}
-#endif
 	victimAddress.valid = PAGE;
 }
 
-void
-ssd::greedy_block(Address& victimAddress,
-                  const std::function<double(const Address&)>& cost,
-                  const std::function<bool(const Address&)>& ignored)
+void ssd::greedy_block(Address& victimAddress, const std::function<double(const Address&)>& cost,
+					   const std::function<bool(const Address&)>& ignored)
 {
 	Address address(victimAddress);
 
 	double minCost = std::numeric_limits<double>::max();
-#ifndef SINGLE_PLANE
 	for (uint package = 0; package < SSD_SIZE; package++) {
 		address.package = package;
 		for (uint die = 0; die < PACKAGE_SIZE; die++) {
@@ -272,7 +197,6 @@ ssd::greedy_block(Address& victimAddress,
 			for (uint plane = 0; plane < DIE_SIZE; plane++) {
 				address.plane = plane;
 				assert(address.check_valid() >= PLANE);
-#endif
 				for (uint block = 0; block < PLANE_SIZE; block++) {
 					address.block = block;
 					assert(address.check_valid() >= BLOCK);
@@ -284,98 +208,462 @@ ssd::greedy_block(Address& victimAddress,
 						}
 					}
 				}
-#ifndef SINGLE_PLANE
 			}
 		}
 	}
-#endif
 	victimAddress.valid = PAGE;
 }
-/*
-std::string ssd::read_sim_parameters(uint argc, char* argv[]){
-	uint argit = 1;
-	const std::string ftl(argv[argit++]);
-	BLOCK_SIZE = static_cast<uint>(std::stoi(argv[argit++]));
-	DCHOICES_D = static_cast<uint>(std::stoi(argv[argit++]));
-	SPARE_FACTOR = std::stod(argv[argit++]);
+*/
+void ssd::random_block_same_plane(Address& victimAddress)
+{
+	assert(victimAddress.check_valid() >= BLOCK);
+	Address address(victimAddress);
 
-	std::string ftlstr;
-	if (boost::iequals(ftl, "DWF")) {
-		ftlstr = "dwf";
-		FTL_IMPLEMENTATION = IMPL_DWF;
-		HOT_FRACTION = std::stod(argv[argit++]);      // f
-		HOT_REQUEST_RATIO = std::stod(argv[argit++]); // r
-	} else if (boost::iequals(ftl, "HCWF")) {
-		ftlstr = "hcwf";
-		FTL_IMPLEMENTATION = IMPL_HCWF;
-		HOT_FRACTION = std::stod(argv[argit++]);      // f
-		HOT_REQUEST_RATIO = std::stod(argv[argit++]); // r
-	} else if (boost::iequals(ftl, "COLD")) {
-		ftlstr = "cold";
-		FTL_IMPLEMENTATION = IMPL_COLD;
-		HOT_FRACTION = std::stod(argv[argit++]);      // f
-		HOT_REQUEST_RATIO = std::stod(argv[argit++]); // r
-	} else {
-		// SWF
-		ftlstr = "swf";
-		FTL_IMPLEMENTATION = IMPL_SWF;
-	}
+	address.block = RandNrGen::get(PLANE_SIZE);
+	assert(address.check_valid() >= BLOCK);
 
-	STARTRUN = static_cast<uint>(std::stoi(argv[argit++])); // startrun
-	NRUNS = static_cast<uint>(std::stoi(argv[argit++]));    // Number of runs
-	PLANE_SIZE = std::stoi(argv[argit++]);
-	BLOCK_ERASES = 10000000;
-	MAXPE = BLOCK_ERASES - static_cast<uint>(std::stoi(argv[argit++])); // Maximum number of PE cycles, counting back
-	return ftlstr;
+	victimAddress = address;
 }
 
+void ssd::random_block_same_plane(Address& victimAddress, const std::vector<Address>& doNotPick)
+{
+	assert(victimAddress.check_valid() >= BLOCK);
+	/// BUG crashes here?
+	Address address(0, 0, 0, 0, 0, PAGE);
+	do {
+		address.block = RandNrGen::get(PLANE_SIZE);
+		assert(address.block < PLANE_SIZE);
+	} while (block_is_in_vector(address, doNotPick));
+	victimAddress = address;
 
-std::string ssd::read_sim_trace_parameters(uint argc, char* argv[], std::string &traceID){
-	uint argit = 1;
-	const std::string ftl(argv[argit++]);
-	BLOCK_SIZE = static_cast<uint>(std::stoi(argv[argit++]));
-	DCHOICES_D = static_cast<uint>(std::stoi(argv[argit++]));
-	SPARE_FACTOR = std::stod(argv[argit++]);
+#ifndef NDEBUG
+	assert(victimAddress.check_valid() >= BLOCK);
+	const bool isDNP1 = address.same_block(doNotPick[0]);
+	const bool isDNP2 = address.same_block(doNotPick[1]);
+	assert(not isDNP1 and not isDNP2);
+#endif
+}
 
-	std::string ftlstr;
-	if (boost::iequals(ftl, "DWF")) {
-		ftlstr = "dwf";
-		FTL_IMPLEMENTATION = IMPL_DWF;
-		HOT_FRACTION = std::stod(argv[argit++]); // f
-	} else if (boost::iequals(ftl, "HCWF")) {
-		ftlstr = "hcwf";
-		FTL_IMPLEMENTATION = IMPL_HCWF;
-		HOT_FRACTION = std::stod(argv[argit++]); // f
-	} else if (boost::iequals(ftl, "COLD")) {
-		ftlstr = "cold";
-		FTL_IMPLEMENTATION = IMPL_COLD;
-		HOT_FRACTION = std::stod(argv[argit++]); // f
-	} else {
-		// SWF
-		ftlstr = "swf";
-		FTL_IMPLEMENTATION = IMPL_SWF;
+void ssd::random_block_same_plane(Address& victimAddress, const std::function<bool(const Address&)>& ignored)
+{
+	assert(victimAddress.check_valid() >= BLOCK);
+	/// BUG crashes here?
+	Address address(0, 0, 0, 0, 0, PAGE);
+	do {
+		address.block = RandNrGen::get(PLANE_SIZE);
+		assert(address.block < PLANE_SIZE);
+	} while (ignored(address));
+	victimAddress = address;
+	assert(victimAddress.check_valid() >= BLOCK);
+	assert(not ignored(address));
+	/// FIXME Remove
+	victimAddress.valid = PAGE;
+}
+
+/// TODO Remove
+void ssd::d_choices_block_same_plane_min_valid_pages(Controller& ctrl, const unsigned int d, Address& victimAddress,
+													 const std::function<bool(const Address&)>& ignored)
+{
+	ssd::Plane* plane = ctrl.get_plane_pointer(victimAddress);
+	Address address(victimAddress);
+
+	uint minCost = std::numeric_limits<uint>::max();
+	auto minCostBlockNr = address.block;
+	uint tries = 0;
+	while (tries < d) {
+#ifndef NDEBUG
+		assert(address.check_valid() >= BLOCK);
+#endif
+		const uint blockNr = RandNrGen::get(PLANE_SIZE);
+		const uint blockCost = plane->data[blockNr].pages_valid;
+		address.block = blockNr;
+		if (not ignored(address)) {
+			tries++;
+			if (blockCost < minCost) {
+				minCost = blockCost;
+				minCostBlockNr = blockNr;
+			}
+		}
+	}
+	victimAddress.block = minCostBlockNr;
+}
+
+void ssd::d_choices_block_same_plane_min_valid_pages_tie_min_erase(Controller& ctrl, const unsigned int d,
+                                                                   Address& victimAddress,
+                                                                   const std::function<bool(const Address&)>& ignored)
+{
+    ssd::Plane* plane = ctrl.get_plane_pointer(victimAddress);
+    Address address(victimAddress);
+
+    uint minCost = std::numeric_limits<uint>::max();
+    std::vector<uint> minCostBlockNumbers = {};
+    ulong minCostErases = std::numeric_limits<uint>::max();
+
+    uint tries = 0;
+    while (tries < d) {
+#ifndef NDEBUG
+        assert(address.check_valid() >= BLOCK);
+#endif
+        const uint blockNr = RandNrGen::get(PLANE_SIZE);
+        const uint blockCost = plane->data[blockNr].pages_valid;
+        const ulong blockErases = plane->data[blockNr].get_erase_count();
+
+        address.block = blockNr;
+        if (not ignored(address)) {
+            tries++;
+            const bool lessCost = blockCost < minCost;
+            const bool sameCost = blockCost == minCost;
+            const bool sameTie = blockErases == minCostErases;
+            const bool tiePrefer = blockErases < minCostErases;
+            if (sameCost and sameTie) {
+                // Select the block with the least amount of erases
+                minCostBlockNumbers.push_back(blockNr);
+            } else if (lessCost or (sameCost and tiePrefer)) {
+                minCostBlockNumbers.clear();
+                minCostBlockNumbers.push_back(blockNr);
+                minCost = blockCost;
+                minCostErases = blockErases;
+            }
+        }
+    }
+    victimAddress.block = minCostBlockNumbers[RandNrGen::get(minCostBlockNumbers.size())];
+}
+
+void ssd::d_choices_block_same_plane_min_valid_pages_tie_max_erase(Controller& ctrl, const unsigned int d,
+                                                                   Address& victimAddress,
+                                                                   const std::function<bool(const Address&)>& ignored)
+{
+    ssd::Plane* plane = ctrl.get_plane_pointer(victimAddress);
+    Address address(victimAddress);
+
+    uint minCost = std::numeric_limits<uint>::max();
+    std::vector<uint> minCostBlockNumbers = {};
+    ulong maxCostErases = std::numeric_limits<uint>::min();
+
+    uint tries = 0;
+    while (tries < d) {
+#ifndef NDEBUG
+        assert(address.check_valid() >= BLOCK);
+#endif
+        const uint blockNr = RandNrGen::get(PLANE_SIZE);
+        const uint blockCost = plane->data[blockNr].pages_valid;
+        const ulong blockErases = plane->data[blockNr].get_erase_count();
+
+        address.block = blockNr;
+        if (not ignored(address)) {
+            tries++;
+            const bool lessCost = blockCost < minCost;
+            const bool sameCost = blockCost == minCost;
+            const bool sameTie = blockErases == maxCostErases;
+            const bool tiePrefer = blockErases > maxCostErases;
+            if (sameCost and sameTie) {
+                // Select the block with the least amount of erases
+                minCostBlockNumbers.push_back(blockNr);
+            } else if (lessCost or (sameCost and tiePrefer)) {
+                minCostBlockNumbers.clear();
+                minCostBlockNumbers.push_back(blockNr);
+                minCost = blockCost;
+                maxCostErases = blockErases;
+            }
+        }
+    }
+    victimAddress.block = minCostBlockNumbers[RandNrGen::get(minCostBlockNumbers.size())];
+}
+
+void ssd::d_choices_block_same_plane(const unsigned int d, Address& victimAddress,
+									 const std::function<uint(const Address&)>& cost,
+									 const std::function<bool(const Address&)>& ignored)
+{
+	do {
+		Address address(victimAddress);
+
+		uint minCost = std::numeric_limits<uint>::max();
+		for (uint i = 0; i < d; i++) {
+			address.block = RandNrGen::get(PLANE_SIZE);
+#ifndef NDEBUG
+			assert(address.check_valid() >= BLOCK);
+#endif
+			const uint blockCost = cost(address);
+			if (blockCost < minCost) {
+				minCost = blockCost;
+				victimAddress = address;
+			}
+		}
+	} while (ignored(victimAddress));
+}
+
+void ssd::d_choices_block_same_plane_min_erase(Controller& ctrl, const unsigned int d, Address& victimAddress,
+                                               const std::function<bool(const Address&)>& ignored)
+{
+
+    ssd::Plane* plane = ctrl.get_plane_pointer(victimAddress);
+    Address address(victimAddress);
+
+    ulong minCost = std::numeric_limits<uint>::max();
+    auto minCostBlockNr = address.block;
+    uint tries = 0;
+    while (tries < d) {
+#ifndef NDEBUG
+        assert(address.check_valid() >= BLOCK);
+#endif
+        const uint blockNr = RandNrGen::get(PLANE_SIZE);
+        const ulong blockCost = plane->data[blockNr].get_erase_count();
+        address.block = blockNr;
+        if (not ignored(address)) {
+            tries++;
+            if (blockCost < minCost) {
+                minCost = blockCost;
+                minCostBlockNr = blockNr;
+            }
+        }
+    }
+    victimAddress.block = minCostBlockNr;
+}
+
+void ssd::d_choices_block_same_plane_min_erase_tie_valid(Controller& ctrl, const unsigned int d, Address& victimAddress,
+                                                         const std::function<bool(const Address&)>& ignored)
+{
+
+    ssd::Plane* plane = ctrl.get_plane_pointer(victimAddress);
+    Address address(victimAddress);
+
+    ulong minCost = std::numeric_limits<ulong>::max();
+    std::vector<uint> minCostBlockNumbers = {};
+    ulong minCostTie = std::numeric_limits<ulong>::max();
+
+    uint tries = 0;
+    while (tries < d) {
+#ifndef NDEBUG
+        assert(address.check_valid() >= BLOCK);
+#endif
+        const uint blockNr = RandNrGen::get(PLANE_SIZE);
+        const ulong blockCost = plane->data[blockNr].get_erase_count();
+        const ulong blockTieCost = plane->data[blockNr].pages_valid;
+
+        address.block = blockNr;
+        if (not ignored(address)) {
+            tries++;
+            if ((blockCost < minCost) or (blockCost == minCost and blockTieCost < minCostTie)) {
+                minCostBlockNumbers.clear();
+                minCostBlockNumbers.push_back(blockNr);
+                minCost = blockCost;
+                minCostTie = blockTieCost;
+            } else if (blockCost == minCost and blockTieCost == minCostTie) {
+                // Select the block with the least amount of valid pages
+                minCostBlockNumbers.push_back(blockNr);
+            }
+        }
+    }
+    victimAddress.block = minCostBlockNumbers[RandNrGen::get(minCostBlockNumbers.size())];
+}
+
+void ssd::greedy_block_same_plane(Address& victimAddress, const std::function<uint(const Address&)>& cost,
+								  const std::function<bool(const Address&)>& ignored)
+{
+	Address address(victimAddress);
+
+	uint minCost = std::numeric_limits<uint>::max();
+	assert(address.check_valid() >= PLANE);
+	for (uint block = 0; block < PLANE_SIZE; block++) {
+		address.block = block;
+		assert(address.check_valid() >= BLOCK);
+		if (not ignored(address)) {
+			const uint blockCost = cost(address);
+			if (blockCost < minCost) {
+				minCost = blockCost;
+				victimAddress = address;
+			}
+		}
 	}
 
-	STARTRUN = static_cast<uint>(std::stoi(argv[argit++])); // startrun
-	NRUNS = static_cast<uint>(std::stoi(argv[argit++]));    // Number of runs
-	BLOCK_ERASES = 10000000;
-	MAXPE = BLOCK_ERASES -
-	        static_cast<uint>(std::stoi(
-	                              argv[argit++])); // Maximum number of PE cycles, counting back
-	NUMREQUESTS = std::stoul(argv[argit++]);
-	TRACEFILE = argv[argit++];
-	const std::string traceID = TRACEFILE.substr(0, 4);
+	victimAddress.valid = PAGE;
+}
 
-	switch (std::stoi(argv[argit++])) {
-	case 0:
-		READER_MODE = EVTRDR_SIMPLE;
-		break;
-	case 1:
-		READER_MODE = EVTRDR_BIOTRACER;
-		break;
-	default:
-		READER_MODE = EVTRDR_SIMPLE;
-		break;
+void ssd::greedy_block_same_plane(Address& victimAddress, const std::function<double(const Address&)>& cost,
+								  const std::function<bool(const Address&)>& ignored)
+{
+	Address address(victimAddress);
+
+	double minCost = std::numeric_limits<double>::max();
+	assert(address.check_valid() >= PLANE);
+	for (uint block = 0; block < PLANE_SIZE; block++) {
+		address.block = block;
+		assert(address.check_valid() >= BLOCK);
+		if (not ignored(address)) {
+			const double blockCost = cost(address);
+			if (blockCost < minCost) {
+				minCost = blockCost;
+				victimAddress = address;
+			}
+		}
 	}
-	return ftlstr;
-}*/
+	victimAddress.valid = PAGE;
+}
+
+void ssd::greedy_block_same_plane_min_valid_pages(Controller& ctrl, Address& victimAddress,
+												  const std::function<bool(const Address&)>& ignored)
+{
+    /** Corrected: pick the minimum block
+        if a block is encountered with the same number of valid pages, decide whether to change or not
+        This should lead to equal probability to get chosen for all blocks with the same amount of valid pages... *
+	ssd::Plane* plane = ctrl.get_plane_pointer(victimAddress);
+	Address address(victimAddress);
+
+	uint minCost = std::numeric_limits<uint>::max();
+	auto minCostBlockNr = address.block;
+	auto minCounter = 1;
+	for (auto blockNr = 0; blockNr < PLANE_SIZE; blockNr++) {
+		const uint blockCost = plane->data[blockNr].pages_valid;
+		address.block = blockNr;
+		if (not ignored(address)) {
+
+			if (blockCost < minCost) {
+				minCounter = 1;
+				minCost = blockCost;
+				minCostBlockNr = blockNr;
+			} else if (blockCost == minCost) {
+				minCounter++;
+				if (RandNrGen::get() < 1.0 / minCounter) {
+					minCostBlockNr = blockNr;
+				}
+			}
+		}
+	}
+    victimAddress.block = minCostBlockNr;
+    */
+    ssd::Plane* plane = ctrl.get_plane_pointer(victimAddress);
+    Address address(victimAddress);
+
+    uint minCost = std::numeric_limits<uint>::max();
+    std::vector<ulong> minCostBlockNumbers = {};
+    for (auto blockNr = 0; blockNr < PLANE_SIZE; blockNr++) {
+        const uint blockCost = plane->data[blockNr].pages_valid;
+        address.block = blockNr;
+        if (not ignored(address)) {
+            if (blockCost < minCost) {
+                minCostBlockNumbers.clear();
+                minCostBlockNumbers.push_back(blockNr);
+                minCost = blockCost;
+            } else if (blockCost == minCost) {
+                minCostBlockNumbers.push_back(blockNr);
+            }
+        }
+    }
+    victimAddress.block = minCostBlockNumbers[RandNrGen::get(minCostBlockNumbers.size())];
+}
+
+void ssd::greedy_block_same_plane_min_valid_pages_tie_min_erase(Controller& ctrl, Address& victimAddress,
+                                                                const std::function<bool(const Address&)>& ignored)
+{
+	ssd::Plane* plane = ctrl.get_plane_pointer(victimAddress);
+	Address address(victimAddress);
+
+	uint minCost = std::numeric_limits<uint>::max();
+    std::vector<uint> minCostBlockNumbers = {};
+    ulong minCostErases = std::numeric_limits<uint>::max();
+	for (auto blockNr = 0; blockNr < PLANE_SIZE; blockNr++) {
+		const uint blockCost = plane->data[blockNr].pages_valid;
+        const ulong blockErases = plane->data[blockNr].get_erase_count();
+        address.block = blockNr;
+		if (not ignored(address)) {
+            const bool lessCost = blockCost < minCost;
+            const bool sameCost = blockCost == minCost;
+            const bool sameTie = blockErases == minCostErases;
+            const bool tiePrefer = blockErases < minCostErases;
+            if (sameCost and sameTie) {
+                // Select the block with the least amount of erases
+                minCostBlockNumbers.push_back(blockNr);
+            } else if (lessCost or (sameCost and tiePrefer)) {
+				minCostBlockNumbers.clear();
+				minCostBlockNumbers.push_back(blockNr);
+				minCost = blockCost;
+                minCostErases = blockErases;
+			}
+		}
+	}
+	victimAddress.block = minCostBlockNumbers[RandNrGen::get(minCostBlockNumbers.size())];
+}
+
+void ssd::greedy_block_same_plane_min_valid_pages_tie_max_erase(Controller& ctrl, Address& victimAddress,
+                                                                const std::function<bool(const Address&)>& ignored)
+{
+    ssd::Plane* plane = ctrl.get_plane_pointer(victimAddress);
+    Address address(victimAddress);
+
+    uint minCost = std::numeric_limits<uint>::max();
+    std::vector<uint> minCostBlockNumbers = {};
+    ulong maxCostErases = std::numeric_limits<uint>::min();
+    for (auto blockNr = 0; blockNr < PLANE_SIZE; blockNr++) {
+        const uint blockCost = plane->data[blockNr].pages_valid;
+        const ulong blockErases = plane->data[blockNr].get_erase_count();
+        address.block = blockNr;
+        if (not ignored(address)) {
+            const bool lessCost = blockCost < minCost;
+            const bool sameCost = blockCost == minCost;
+            const bool sameTie = blockErases == maxCostErases;
+            const bool tiePrefer = blockErases > maxCostErases;
+            if (sameCost and sameTie) {
+                // Select the block with the least amount of erases
+                minCostBlockNumbers.push_back(blockNr);
+            } else if (lessCost or (sameCost and tiePrefer)) {
+                minCostBlockNumbers.clear();
+                minCostBlockNumbers.push_back(blockNr);
+                minCost = blockCost;
+                maxCostErases = blockErases;
+            }
+        }
+    }
+    victimAddress.block = minCostBlockNumbers[RandNrGen::get(minCostBlockNumbers.size())];
+}
+
+void ssd::greedy_block_same_plane_min_erase(Controller& ctrl, Address& victimAddress,
+                                            const std::function<bool(const Address&)>& ignored)
+{
+    ssd::Plane* plane = ctrl.get_plane_pointer(victimAddress);
+    Address address(victimAddress);
+
+    uint minCost = std::numeric_limits<uint>::max();
+    std::vector<ulong> minCostBlockNumbers = {};
+    for (auto blockNr = 0; blockNr < PLANE_SIZE; blockNr++) {
+        const uint blockCost = plane->data[blockNr].get_erase_count();
+        address.block = blockNr;
+        if (not ignored(address)) {
+            if (blockCost < minCost) {
+                minCostBlockNumbers.clear();
+                minCostBlockNumbers.push_back(blockNr);
+                minCost = blockCost;
+            } else if (blockCost == minCost) {
+                minCostBlockNumbers.push_back(blockNr);
+            }
+        }
+    }
+    victimAddress.block = minCostBlockNumbers[RandNrGen::get(minCostBlockNumbers.size())];
+}
+
+void ssd::greedy_block_same_plane_min_erase_tie_valid(Controller& ctrl, Address& victimAddress,
+                                                      const std::function<bool(const Address&)>& ignored)
+{
+    ssd::Plane* plane = ctrl.get_plane_pointer(victimAddress);
+    Address address(victimAddress);
+
+    ulong minCost = std::numeric_limits<ulong>::max();
+    std::vector<uint> minCostBlockNumbers = {};
+    ulong minCostTie = std::numeric_limits<ulong>::max();
+    for (auto blockNr = 0; blockNr < PLANE_SIZE; blockNr++) {
+        const ulong blockCost = plane->data[blockNr].get_erase_count();
+        const ulong blockTie = plane->data[blockNr].pages_valid;
+        address.block = blockNr;
+        if (not ignored(address)) {
+            if ((blockCost < minCost) or (blockCost == minCost and blockTie < minCostTie)) {
+                minCostBlockNumbers.clear();
+                minCostBlockNumbers.push_back(blockNr);
+                minCost = blockCost;
+                minCostTie = blockTie;
+            } else if (blockCost == minCost and blockTie == minCostTie) {
+                // Select the block with the least amount of valid pages
+                minCostBlockNumbers.push_back(blockNr);
+            }
+        }
+    }
+    victimAddress.block = minCostBlockNumbers[RandNrGen::get(minCostBlockNumbers.size())];
+}

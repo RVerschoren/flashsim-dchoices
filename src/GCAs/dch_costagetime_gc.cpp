@@ -26,30 +26,20 @@
 
 using namespace ssd;
 
-GCImpl_DChoices_CostAgeTime::GCImpl_DChoices_CostAgeTime(FtlParent* ftl, const uint d)
-    : Garbage_collector(ftl)
-    , d(d)
-{
-}
+GCImpl_DChoices_CostAgeTime::GCImpl_DChoices_CostAgeTime(FtlParent* ftl, const uint d) : Garbage_collector(ftl), d(d) {}
 
-GCImpl_DChoices_CostAgeTime::~GCImpl_DChoices_CostAgeTime()
-{
-}
+GCImpl_DChoices_CostAgeTime::~GCImpl_DChoices_CostAgeTime() {}
 
-void
-GCImpl_DChoices_CostAgeTime::collect(const Event& evt, Address& victimAddress,
-                            const std::function<bool(const Address&)>& ignorePred)
+void GCImpl_DChoices_CostAgeTime::collect(const Event& evt, Address& victimAddress,
+                                          const std::function<bool(const Address&)>& ignorePred, bool replacingHotBlock)
 {
-        std::function<double(const Address&)> costFunc =
-        [this, &evt](const Address& addr) {
-            const Block* blockPtr = ftl->get_block(addr);
-            const double age =
-                evt.get_start_time() - blockPtr->get_last_erase_time();
-            const double u = static_cast<double>(blockPtr->get_pages_valid()) /
-                             static_cast<double>(BLOCK_SIZE);
-            const double CT = blockPtr->get_erase_count();
-            return (age * (1.0 - u)) / (u * CT);
-        };
+    std::function<double(const Address&)> costFunc = [this, &evt](const Address& addr) {
+        const Block* blockPtr = ftl->get_block(addr);
+        const double age = evt.get_start_time() - blockPtr->get_last_erase_time();
+        const double u = static_cast<double>(blockPtr->get_pages_valid()) / static_cast<double>(BLOCK_SIZE);
+        const double CT = blockPtr->get_erase_count();
+        return (age * (1.0 - u)) / (u * CT);
+    };
 
-        d_choices_block(d, victimAddress, costFunc, ignorePred);
+    d_choices_block_same_plane(d, victimAddress, costFunc, ignorePred);
 }

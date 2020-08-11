@@ -29,33 +29,25 @@
 
 using namespace ssd;
 
-WLvlImpl_CleanMaxValidDCh::WLvlImpl_CleanMaxValidDCh(FtlParent* ftl,
-        const double p,
-        const uint d)
-	: Wear_leveler(ftl)
-	, p(p)
-	, d(d)
+WLvlImpl_CleanMaxValidDCh::WLvlImpl_CleanMaxValidDCh(FtlParent* ftl, const double p, const uint d)
+    : Wear_leveler(ftl), p(p), d(d)
 {
 }
 
-WLvlImpl_CleanMaxValidDCh::~WLvlImpl_CleanMaxValidDCh()
-{
-}
+WLvlImpl_CleanMaxValidDCh::~WLvlImpl_CleanMaxValidDCh() {}
 
-enum status
-WLvlImpl_CleanMaxValidDCh::suggest_WF(Address& WFSuggestion,
-                                      const std::vector<Address>& doNotPick) {
-	if (RandNrGen::get() < p)   // Pick a random block
+enum status WLvlImpl_CleanMaxValidDCh::suggest_WF(Event& /*evt*/, Address& WFSuggestion, Controller& /*controller*/,
+                                                  const std::vector<Address>& doNotPick)
+{
+    if (RandNrGen::get() < p) // Pick a random block
 	{
-		std::function<uint(const Address&)> costFunc =
-		[this](const Address& addr) {
+        std::function<uint(const Address&)> validPages = [this](const Address& addr) {
 			return BLOCK_SIZE - FTL->get_pages_valid(addr);
 		};
-		std::function<bool(const Address&)> ignorePred = [this, &doNotPick](
-		const Address& addr) {
+        std::function<bool(const Address&)> ignorePred = [&doNotPick](const Address& addr) {
 			return block_is_in_vector(addr, doNotPick);
 		};
-		d_choices_block(d, WFSuggestion, costFunc, ignorePred);
+        d_choices_block_same_plane(d, WFSuggestion, validPages, ignorePred);
 		return SUCCESS;
 	}
 	return FAILURE;

@@ -25,22 +25,19 @@
 
 using namespace ssd;
 
-GCImpl_Greedy::GCImpl_Greedy(FtlParent* ftl)
-	: Garbage_collector(ftl)
-{
-}
+GCImpl_Greedy::GCImpl_Greedy(FtlParent* ftl) : Garbage_collector(ftl) {}
 
-GCImpl_Greedy::~GCImpl_Greedy()
-{
-}
+GCImpl_Greedy::~GCImpl_Greedy() {}
 
-void
-GCImpl_Greedy::collect(const Event& /*evt*/, Address& victimAddress,
-                       const std::function<bool(const Address&)>& ignorePred)
-                       //const std::vector<Address>& doNotPick)
+void GCImpl_Greedy::collect(const Event& /*evt*/, Address& victimAddress,
+                            const std::function<bool(const Address&)>& ignorePred, bool /*replacingHotBlock*/)
 {
-	std::function<uint(const Address&)> costFunc = [this](const Address& addr) {
-		return ftl->get_pages_valid(addr);
+	/*std::function<uint(const Address&)> costFunc = [this](const Address& addr) {
+				  return ftl->get_pages_valid(addr);
+		  };
+		  greedy_block_same_plane(victimAddress, costFunc, ignorePred);*/
+    std::function<uint(const Address&)> validPages = [this](const Address& address) {
+        return ftl->get_pages_valid(address);
     };
-	greedy_block(victimAddress, costFunc, ignorePred);
+    greedy_block_same_plane(victimAddress, validPages, ignorePred);
 }

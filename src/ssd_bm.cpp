@@ -16,7 +16,7 @@
 #include <vector>
 
 using namespace ssd;
-
+#ifndef NOT_USE_BLOCKMGR
 Block_manager::Block_manager(FtlParent* ftl)
 	: ftl(ftl)
 {
@@ -95,7 +95,7 @@ Block_manager::get_page_block(Address& address, Event& event)
 
 		assert(free_list.size() != 0);
 		address.set_linear_address(free_list.front()->get_physical_address(),
-		                           BLOCK);
+								   BLOCK);
 		current_writing_block = free_list.front()->get_physical_address();
 		free_list.erase(free_list.begin());
 		out_of_blocks = false;
@@ -142,12 +142,12 @@ Block_manager::print_statistics()
 	printf("Log blocks:  %lu\n", log_active);
 	printf("Data blocks: %lu\n", data_active);
 	printf("Free blocks: %lu\n",
-	       (max_blocks - (simpleCurrentFree / BLOCK_SIZE)) + free_list.size());
+		   (max_blocks - (simpleCurrentFree / BLOCK_SIZE)) + free_list.size());
 	printf("Invalid blocks: %lu\n", invalid_list.size());
 	printf("Free2 blocks: %lu\n", (unsigned long int)invalid_list.size() +
-	       (unsigned long int)log_active +
-	       (unsigned long int)data_active -
-	       (unsigned long int)free_list.size());
+		   (unsigned long int)log_active +
+		   (unsigned long int)data_active -
+		   (unsigned long int)free_list.size());
 	printf("-----------------\n");
 }
 
@@ -177,7 +177,7 @@ Block_manager::insert_events(Event& event)
 {
 	// Calculate if GC should be activated.
 	float used = (int)invalid_list.size() + (int)log_active + (int)data_active -
-	             (int)free_list.size();
+				 (int)free_list.size();
 	float total = NUMBER_OF_ADDRESSABLE_BLOCKS;
 	float ratio = used / total;
 
@@ -192,9 +192,9 @@ Block_manager::insert_events(Event& event)
 	// by FAST)
 	while (num_to_erase != 0 && invalid_list.size() != 0) {
 		Event erase_event =
-		    Event(ERASE, event.get_logical_address(), 1, event.get_start_time());
+			Event(ERASE, event.get_logical_address(), 1, event.get_start_time());
 		erase_event.set_address(
-		    Address(invalid_list.back()->get_physical_address(), BLOCK));
+			Address(invalid_list.back()->get_physical_address(), BLOCK));
 		if (ftl->controller.issue(erase_event) == FAILURE) {
 			assert(false);
 		}
@@ -214,9 +214,9 @@ Block_manager::insert_events(Event& event)
 		ActiveByCost::iterator it = active_cost.get<1>().end();
 		--it;
 
-		/// TODO Probably something to GC here?
+		/// NOTE Probably something to GC here?
 		while (num_to_erase != 0 && (*it)->get_pages_invalid() > 0 &&
-		        (*it)->get_pages_valid() == BLOCK_SIZE) {
+				(*it)->get_pages_valid() == BLOCK_SIZE) {
 			if (current_writing_block != (*it)->physical_address) {
 				// printf("erase p: %p phy: %li ratio: %i num: %i\n", (*it),
 				// (*it)->physical_address, (*it)->get_pages_invalid(),
@@ -228,9 +228,9 @@ Block_manager::insert_events(Event& event)
 
 				// Create erase event and attach to current event queue.
 				Event erase_event = Event(ERASE, event.get_logical_address(), 1,
-				                          event.get_start_time());
+										  event.get_start_time());
 				erase_event.set_address(
-				    Address(blockErase->get_physical_address(), BLOCK));
+					Address(blockErase->get_physical_address(), BLOCK));
 
 				// Execute erase
 				if (ftl->controller.issue(erase_event) == FAILURE) {
@@ -287,7 +287,7 @@ Block_manager::print_cost_status()
 
 	for (uint i = 0; i < 10; i++) { // SSD_SIZE*PACKAGE_SIZE*DIE_SIZE*PLANE_SIZE
 		printf("%li %i %i\n", (*it)->physical_address, (*it)->get_pages_valid(),
-		       (*it)->get_pages_invalid());
+			   (*it)->get_pages_invalid());
 		++it;
 	}
 
@@ -298,17 +298,17 @@ Block_manager::print_cost_status()
 
 	for (uint i = 0; i < 10; i++) { // SSD_SIZE*PACKAGE_SIZE*DIE_SIZE*PLANE_SIZE
 		printf("%li %i %i\n", (*it)->physical_address, (*it)->get_pages_valid(),
-		       (*it)->get_pages_invalid());
+			   (*it)->get_pages_invalid());
 		--it;
 	}
 }
 
 void
 Block_manager::erase_and_invalidate(Event& event, Address& address,
-                                    block_type btype)
+									block_type btype)
 {
 	Event erase_event = Event(ERASE, event.get_logical_address(), 1,
-	                          event.get_start_time() + event.get_time_taken());
+							  event.get_start_time() + event.get_time_taken());
 	erase_event.set_address(address);
 
 	if (ftl->controller.issue(erase_event) == FAILURE) {
@@ -337,7 +337,7 @@ Block_manager::get_num_free_blocks()
 {
 	if (simpleCurrentFree < max_blocks * BLOCK_SIZE)
 		return static_cast<int>((simpleCurrentFree / BLOCK_SIZE) +
-		                        free_list.size());
+								free_list.size());
 	else
 		return static_cast<int>(free_list.size());
 }
@@ -348,3 +348,4 @@ Block_manager::update_block(Block* b)
 	std::size_t pos = (b->physical_address / BLOCK_SIZE);
 	active_cost.replace(active_cost.begin() + pos, b);
 }
+#endif

@@ -31,42 +31,19 @@
 
 using namespace ssd;
 
-WLvlImpl_Ban::WLvlImpl_Ban(FtlParent* ftl, const ulong tau)
-	: Wear_leveler(ftl)
-	, tau(tau)
-{
-}
+WLvlImpl_Ban::WLvlImpl_Ban(FtlParent* ftl, const ulong tau) : Wear_leveler(ftl), tau(tau) {}
 
-WLvlImpl_Ban::~WLvlImpl_Ban()
-{
-}
+WLvlImpl_Ban::~WLvlImpl_Ban() {}
 
-enum status
-WLvlImpl_Ban::suggest_WF(Address& WFSuggestion,
-                         const std::vector<Address>& doNotPick) {
-	if (FTL->controller.stats.numGCErase % tau == 0)   // Pick a random block
+enum status WLvlImpl_Ban::suggest_WF(Event& /*evt*/, Address& WFSuggestion, Controller& /*controller*/,
+                                     const std::vector<Address>& doNotPick)
+{
+    if (FTL->controller.stats.numGCErase % tau == 0) // Pick a random block
 	{
-		/// TODO Remove commented part
-		/*
-		do {
-		#ifndef SINGLE_PLANE
-		    WFSuggestion.package = RandNrGen::get(SSD_SIZE);
-		    WFSuggestion.die = RandNrGen::get(PACKAGE_SIZE);
-		#endif
-		    WFSuggestion.plane = RandNrGen::get(DIE_SIZE);
-		    WFSuggestion.block = RandNrGen::get(PLANE_SIZE);
-		} while (is_WF_victim(FTL->get_block_pointer(WFSuggestion),
-		doNotPick));*/
-		std::function<bool(const Address&)> ignorePred = [this, &doNotPick](
-		const Address& addr) {
+        std::function<bool(const Address&)> ignorePred = [&doNotPick](const Address& addr) {
 			return block_is_in_vector(addr, doNotPick);
 		};
 		random_block(WFSuggestion, ignorePred);
-#ifdef DEBUG
-		std::cout << "INSERTED BAN at" << FTL->controller.stats.numGCErase
-		          << std::endl;
-#endif
-
 		return SUCCESS;
 	}
 	return FAILURE;

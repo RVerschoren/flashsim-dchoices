@@ -43,7 +43,7 @@
 #include <vector>
 
 using namespace ssd;
-
+#ifndef NOT_USE_BLOCKMGR
 LogPageBlock::LogPageBlock()
 {
 	pages = new int[BLOCK_SIZE];
@@ -439,3 +439,4 @@ FtlImpl_Bast::print_ftl_statistics()
 {
 	Block_manager::instance()->print_statistics();
 }
+#endif

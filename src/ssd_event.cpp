@@ -37,7 +37,7 @@ using namespace ssd;
 
 /* see "enum event_type" in ssd.h for details on event types */
 Event::Event(enum event_type type, ulong logical_address, uint size,
-             double start_time)
+			 double start_time)
 	: start_time(start_time)
 	, time_taken(0.0)
 	, bus_wait_time(0.0)
@@ -259,7 +259,7 @@ Event::print(FILE* stream)
 	if (type == MERGE)
 		merge_address.print(stream);
 	fprintf(stream, " Time[%f, %f) Bus_wait: %f\n", start_time,
-	        start_time + time_taken, bus_wait_time);
+			start_time + time_taken, bus_wait_time);
 	return;
 }
 
@@ -312,28 +312,29 @@ Event::is_hot() const
 {
 	return hot;
 }
+///NOTE Remove dead code
 /*
 void ssd::read_oracle(const std::string &filename, std::vector<Event> &events)
 {
-    std::ifstream data(filename);
-    std::vector<bool> oracle;
-    std::string line;
-    while(std::getline(data,line))
-    {
-        std::stringstream  lineStream(line);
-        std::string        cell;
-        std::getline(lineStream,cell,',');
-        const bool value = std::stoi(cell) != 0;
-        oracle.push_back(value);
-    }
-    //return oracle;
-    std::cout << filename << "    "  << oracle.size() << "    " << events.size()
+	std::ifstream data(filename);
+	std::vector<bool> oracle;
+	std::string line;
+	while(std::getline(data,line))
+	{
+		std::stringstream  lineStream(line);
+		std::string        cell;
+		std::getline(lineStream,cell,',');
+		const bool value = std::stoi(cell) != 0;
+		oracle.push_back(value);
+	}
+	//return oracle;
+	std::cout << filename << "    "  << oracle.size() << "    " << events.size()
 << std::endl;
-    assert(oracle.size() == events.size());
-    for(ulong it = 0; it < events.size(); it++)
-    {
-        events[it].set_hot(oracle[it]);
-    }
+	assert(oracle.size() == events.size());
+	for(ulong it = 0; it < events.size(); it++)
+	{
+		events[it].set_hot(oracle[it]);
+	}
 }
 */
 /**
@@ -345,76 +346,76 @@ void ssd::read_oracle(const std::string &filename, std::vector<Event> &events)
  void ssd::read_event_from_trace(std::string filename, std::function<Event
  (std::string)> readLine, std::vector<Event> &events)
  {
-     std::ifstream data(filename);
-     std::string line;
-     unsigned long it = 0;
-     while(std::getline(data,line))
-     {
-         events.at(it) = readLine(line);
-     }
-     return events;
+	 std::ifstream data(filename);
+	 std::string line;
+	 unsigned long it = 0;
+	 while(std::getline(data,line))
+	 {
+		 events.at(it) = readLine(line);
+	 }
+	 return events;
  }
 
  Event ssd::read_event_simple(std::string line)
  {
-     const char delim = ',';
-     std::stringstream  lineStream(line);
-     std::string        cell;
-     std::getline(lineStream,cell,delim);
-     const unsigned long startAddress = cell.empty()? 0UL : std::stoul(cell);
-     std::getline(lineStream,cell,delim);
-     const  event_type  type = (cell.empty() or std::stoi(cell) != 0)? WRITE :
+	 const char delim = ',';
+	 std::stringstream  lineStream(line);
+	 std::string        cell;
+	 std::getline(lineStream,cell,delim);
+	 const unsigned long startAddress = cell.empty()? 0UL : std::stoul(cell);
+	 std::getline(lineStream,cell,delim);
+	 const  event_type  type = (cell.empty() or std::stoi(cell) != 0)? WRITE :
  TRIM;
-     /// TODO Find a better solution than zero start times to determine the
+	 /// TODO Find a better solution than zero start times to determine the
  right start time
-     return Event(type, startAddress, 1, 0.0);
+	 return Event(type, startAddress, 1, 0.0);
  }
 
  Event ssd::read_event_BIOtracer(std::string line)
  {
-     const char delim = '\t';
-     std::stringstream  lineStream(line);
-     std::string        cell;
+	 const char delim = '\t';
+	 std::stringstream  lineStream(line);
+	 std::string        cell;
 
-     std::getline(lineStream,cell,delim);
-     const unsigned long startAddress = cell.empty()? 0UL : std::stoul(cell);
-     //Need to getline twice because fields are delimited by 2 tabs instead of
+	 std::getline(lineStream,cell,delim);
+	 const unsigned long startAddress = cell.empty()? 0UL : std::stoul(cell);
+	 //Need to getline twice because fields are delimited by 2 tabs instead of
  only 1...
-     std::getline(lineStream,cell,delim);
-     std::getline(lineStream,cell,delim);
-     //const unsigned long numSectors = cell.empty()? 1UL :
+	 std::getline(lineStream,cell,delim);
+	 std::getline(lineStream,cell,delim);
+	 //const unsigned long numSectors = cell.empty()? 1UL :
  (std::stoul(cell)/8+1);
-     std::getline(lineStream,cell,delim);
-     std::getline(lineStream,cell,delim);
-     const unsigned long numSectors = cell.empty()? 1UL :
+	 std::getline(lineStream,cell,delim);
+	 std::getline(lineStream,cell,delim);
+	 const unsigned long numSectors = cell.empty()? 1UL :
  (std::stoul(cell)/4096+1);//in bytes
-     std::getline(lineStream,cell,delim);
-     std::getline(lineStream,cell,delim);
-     const unsigned int value = cell.empty()? 0UL : std::stoul(cell);
-     const event_type type = value % 2 == 0? READ : WRITE;
-     std::getline(lineStream,cell,delim);
-     std::getline(lineStream,cell,delim);
-     //const double requestGenTime= cell.empty()? 0.0 : (std::stod(cell));
-     std::getline(lineStream,cell,delim);
-     std::getline(lineStream,cell,delim);
-     //const double requestProcessTime= cell.empty()? 0.0 : (std::stod(cell));
-     std::getline(lineStream,cell,delim);
-     std::getline(lineStream,cell,delim);
-     const double startTime = cell.empty()? 0.0 : std::stod(cell);
+	 std::getline(lineStream,cell,delim);
+	 std::getline(lineStream,cell,delim);
+	 const unsigned int value = cell.empty()? 0UL : std::stoul(cell);
+	 const event_type type = value % 2 == 0? READ : WRITE;
+	 std::getline(lineStream,cell,delim);
+	 std::getline(lineStream,cell,delim);
+	 //const double requestGenTime= cell.empty()? 0.0 : (std::stod(cell));
+	 std::getline(lineStream,cell,delim);
+	 std::getline(lineStream,cell,delim);
+	 //const double requestProcessTime= cell.empty()? 0.0 : (std::stod(cell));
+	 std::getline(lineStream,cell,delim);
+	 std::getline(lineStream,cell,delim);
+	 const double startTime = cell.empty()? 0.0 : std::stod(cell);
 
-     return Event(type, startAddress, numSectors, startTime);
+	 return Event(type, startAddress, numSectors, startTime);
  }
 
  ulong ssd::count_unique_lpns(const std::vector<Event> &events)
  {
-     std::set<ulong> uniqueLPNs;
-     for(const Event &evt : events)
-     {
-         const ulong &lpn = evt.get_logical_address();
-         if(uniqueLPNs.find(lpn) == uniqueLPNs.end()) // Not found in set
-         {
-             uniqueLPNs.insert(lpn);
-         }
-     }
-     return uniqueLPNs.size();
+	 std::set<ulong> uniqueLPNs;
+	 for(const Event &evt : events)
+	 {
+		 const ulong &lpn = evt.get_logical_address();
+		 if(uniqueLPNs.find(lpn) == uniqueLPNs.end()) // Not found in set
+		 {
+			 uniqueLPNs.insert(lpn);
+		 }
+	 }
+	 return uniqueLPNs.size();
  }*/

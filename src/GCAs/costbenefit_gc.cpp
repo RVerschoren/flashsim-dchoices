@@ -26,29 +26,20 @@
 
 using namespace ssd;
 
-GCImpl_CostBenefit::GCImpl_CostBenefit(FtlParent* ftl)
-    : Garbage_collector(ftl)
-{
-}
+GCImpl_CostBenefit::GCImpl_CostBenefit(FtlParent* ftl) : Garbage_collector(ftl) {}
 
-GCImpl_CostBenefit::~GCImpl_CostBenefit()
-{
-}
+GCImpl_CostBenefit::~GCImpl_CostBenefit() {}
 
-void
-GCImpl_CostBenefit::collect(const Event& evt, Address& victimAddress,
-                            const std::function<bool(const Address&)>& ignorePred)
+void GCImpl_CostBenefit::collect(const Event& evt, Address& victimAddress,
+                                 const std::function<bool(const Address&)>& ignorePred, bool replacingHotBlock)
 {
-	std::function<double(const Address&)> costFunc =
-	[this, &evt](const Address& addr) {
-		const Block* blockPtr = ftl->get_block(addr);
-		const double age =
-            evt.get_start_time() - blockPtr->get_last_page_invalidate_time();
-		const double u = static_cast<double>(blockPtr->get_pages_valid()) /
-		                 static_cast<double>(BLOCK_SIZE);
+    std::function<double(const Address&)> costFunc = [this, &evt](const Address& addr) {
+        const Block* blockPtr = ftl->get_block(addr);
+        const double age = evt.get_start_time() - blockPtr->get_last_page_invalidate_time();
+        const double u = static_cast<double>(blockPtr->get_pages_valid()) / static_cast<double>(BLOCK_SIZE);
         const double benefitPerCost = (2.0 * u) / (age * (1.0 - u));
-		return benefitPerCost;
-	};
+        return benefitPerCost;
+    };
 
-	greedy_block(victimAddress, costFunc, ignorePred);
+    greedy_block_same_plane(victimAddress, costFunc, ignorePred);
 }

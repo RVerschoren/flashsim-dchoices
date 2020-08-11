@@ -33,35 +33,30 @@
 #include <new>
 #include <stdio.h>
 #include <stdlib.h>
+#ifndef _WIN32
 #include <sys/mman.h>
 #include <unistd.h>
-
+#endif
 using namespace ssd;
 
 /* use caution when editing the initialization list - initialization actually
  * occurs in the order of declaration in the class definition and not in the
  * order listed here */
 Ssd::Ssd(uint ssd_size, HotColdID* hcID)
-	: size(ssd_size)
-	, controller(*this, hcID)
-	, ram(RAM_READ_DELAY, RAM_WRITE_DELAY)
-	, bus(size, BUS_CTRL_DELAY, BUS_DATA_DELAY, BUS_TABLE_SIZE, BUS_MAX_CONNECT)
-	,
+	: size(ssd_size), controller(*this, hcID), ram(RAM_READ_DELAY, RAM_WRITE_DELAY),
+	  bus(size, BUS_CTRL_DELAY, BUS_DATA_DELAY, BUS_TABLE_SIZE, BUS_MAX_CONNECT),
 
 	  /* use a const pointer (Package * const data) to use as an array
 	   * but like a reference, we cannot reseat the pointer */
-	  data((Package*)malloc(ssd_size * sizeof(Package)))
-	,
+	  data((Package*)malloc(ssd_size * sizeof(Package))),
 
 	  /* set erases remaining to BLOCK_ERASES to match Block constructor args
 	   *	in Plane class
 	   * this is the cheap implementation but can change to pass through classes */
-	  erases_remaining(BLOCK_ERASES)
-	,
+	  erases_remaining(BLOCK_ERASES),
 
 	  /* assume all Planes are same so first one can start as least worn */
-	  least_worn(0)
-	,
+	  least_worn(0),
 
 	  /* assume hardware created at time 0 and had an implied free erasure */
 	  last_erase_time(0.0)
@@ -76,44 +71,34 @@ Ssd::Ssd(uint ssd_size, HotColdID* hcID)
 	/* array allocated in initializer list:
 	 * data = (Package *) malloc(ssd_size * sizeof(Package)); */
 	if (data == NULL) {
-		fprintf(stderr,
-		        "Ssd error: %s: constructor unable to allocate Package data\n",
-		        __func__);
+		fprintf(stderr, "Ssd error: %s: constructor unable to allocate Package data\n", __func__);
 		exit(MEM_ERR);
 	}
 
 	for (i = 0; i < ssd_size; i++) {
 		(void)new (&data[i])
-		Package(*this, bus.get_channel(i), PACKAGE_SIZE,
-		        PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE * i);
+			Package(*this, bus.get_channel(i), PACKAGE_SIZE, PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE * i);
 	}
 
+#ifndef _WIN32
 	// Check for 32bit machine. We do not allow page data on 32bit machines.
 	if (PAGE_ENABLE_DATA == 1 && sizeof(void*) == 4) {
-		fprintf(stderr, "Ssd error: %s: The simulator requires a 64bit kernel "
-		        "when using data pages. Disabling data pages.\n",
-		        __func__);
+		fprintf(stderr,
+				"Ssd error: %s: The simulator requires a 64bit kernel "
+				"when using data pages. Disabling data pages.\n",
+				__func__);
 		exit(MEM_ERR);
 	}
-
 	if (PAGE_ENABLE_DATA) {
 		/* Allocate memory for data pages */
-		ulong pageSize = ((ulong)(SSD_SIZE * PACKAGE_SIZE * DIE_SIZE *
-		                          PLANE_SIZE * BLOCK_SIZE)) *
-		                 (ulong)PAGE_SIZE;
+		ulong pageSize = ((ulong)(SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE)) * (ulong)PAGE_SIZE;
 #ifdef __APPLE__
-		page_data = mmap(NULL, pageSize, PROT_READ | PROT_WRITE,
-		                 MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+		page_data = mmap(NULL, pageSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
 #else
-		page_data = mmap64(NULL, pageSize, PROT_READ | PROT_WRITE,
-		                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+		page_data = mmap64(NULL, pageSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
 #endif
-
 		if (page_data == MAP_FAILED) {
-			fprintf(
-			    stderr,
-			    "Ssd error: %s: constructor unable to allocate page data.\n",
-			    __func__);
+			fprintf(stderr, "Ssd error: %s: constructor unable to allocate page data.\n", __func__);
 			switch (errno) {
 			case EACCES:
 				break;
@@ -125,19 +110,15 @@ Ssd::Ssd(uint ssd_size, HotColdID* hcID)
 
 	assert(VIRTUAL_BLOCK_SIZE > 0);
 	assert(VIRTUAL_PAGE_SIZE > 0);
-
+#endif
 	return;
 }
 
-void
-Ssd::initialize(const ulong numUniqueLPNs)
-{
-	controller.initialize(numUniqueLPNs);
-}
+void Ssd::initialize(const ulong numUniqueLPNs) { controller.initialize(numUniqueLPNs); }
 
 /*void Ssd::initialize(const std::set<ulong> &uniqueLPNs)
 {
-    controller.initialize(uniqueLPNs);
+	controller.initialize(uniqueLPNs);
 }*/
 
 Ssd::~Ssd(void)
@@ -148,64 +129,61 @@ Ssd::~Ssd(void)
 		data[i].~Package();
 	}
 	free(data);
+#ifndef _WIN32
 	if (PAGE_ENABLE_DATA) {
-		ulong pageSize = ((ulong)(SSD_SIZE * PACKAGE_SIZE * DIE_SIZE *
-		                          PLANE_SIZE * BLOCK_SIZE)) *
-		                 (ulong)PAGE_SIZE;
+		ulong pageSize = ((ulong)(SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE)) * (ulong)PAGE_SIZE;
 		munmap(page_data, pageSize);
 	}
-
+#endif
 	return;
 }
 
-double
-Ssd::event_arrive(enum event_type type, ulong logical_address, uint size,
-                  double start_time)
+double Ssd::event_arrive(enum event_type type, ulong logical_address, uint size, double start_time)
 {
 	return event_arrive(type, logical_address, size, start_time, NULL);
 	/*	printf("=========================================\n");
-	    LOG();
-	    Event *event = NULL;
-	    Event *event2 = NULL;
+		LOG();
+		Event *event = NULL;
+		Event *event2 = NULL;
 
-	    if((event = new Event(type, logical_address, size, start_time)) == NULL)
-	    {
-	        fprintf(stderr, "Ssd error: %s: could not allocate Event\n",
+		if((event = new Event(type, logical_address, size, start_time)) == NULL)
+		{
+			fprintf(stderr, "Ssd error: %s: could not allocate Event\n",
 	   __func__);
-	        exit(MEM_ERR);
-	    }
-	    if((event2 = new Event(type, logical_address, size, start_time)) ==
+			exit(MEM_ERR);
+		}
+		if((event2 = new Event(type, logical_address, size, start_time)) ==
 	   NULL)
-	    {
-	        fprintf(stderr, "Ssd error: %s: could not allocate Event\n",
+		{
+			fprintf(stderr, "Ssd error: %s: could not allocate Event\n",
 	   __func__);
-	        exit(MEM_ERR);
-	    }
+			exit(MEM_ERR);
+		}
 
-	    cmdq->enqueue(*event);
-	    cmdq->show();
-	    printf("event->get_logical_address() : %lu\n",
+		cmdq->enqueue(*event);
+		cmdq->show();
+		printf("event->get_logical_address() : %lu\n",
 	   event->get_logical_address());
 
-	    while(start_time > timeline)
-	    {
-	        event2 = cmdq->dequeue();
+		while(start_time > timeline)
+		{
+			event2 = cmdq->dequeue();
 
-	        printf("timeline : %lf\n", timeline);
-	        printf("start_time : %lf\n", start_time);
+			printf("timeline : %lf\n", timeline);
+			printf("start_time : %lf\n", start_time);
 
-	        printf("event2->get_event_type() : %d\n", event2->get_event_type());
-	        printf("event2->get_logical_address() : %lu\n",
+			printf("event2->get_event_type() : %d\n", event2->get_event_type());
+			printf("event2->get_logical_address() : %lu\n",
 	   event2->get_logical_address());
 
-	        timeline += event_arrive(event2->get_event_type(),
+			timeline += event_arrive(event2->get_event_type(),
 	   event2->get_logical_address(), event2->get_size(),
 	   event2->get_start_time());
 
-	        printf("timeline : %lf\n", timeline);
-	        printf("start_time : %lf\n", start_time);
-	        cmdq->show();
-	    }
+			printf("timeline : %lf\n", timeline);
+			printf("start_time : %lf\n", start_time);
+			cmdq->show();
+		}
 
 	*/
 }
@@ -216,21 +194,17 @@ Ssd::event_arrive(enum event_type type, ulong logical_address, uint size,
  * 	time (arrive time) of the request
  * The SSD will process the request and return the time taken to process the
  * 	request.  Remember to use the same time units as in the config file. */
-double
-Ssd::event_arrive(enum event_type type, ulong logical_address, uint size,
-                  double start_time, void* buffer)
+double Ssd::event_arrive(enum event_type type, ulong logical_address, uint size, double start_time, void* buffer)
 {
 	assert(start_time >= 0.0);
 
-#ifdef DEBUG
+#ifndef NDEBUG
 	if (VIRTUAL_PAGE_SIZE == 1)
-		assert((long long int)logical_address <= (long long int)SSD_SIZE *
-		       PACKAGE_SIZE * DIE_SIZE *
-		       PLANE_SIZE * BLOCK_SIZE);
+		assert((long long int)logical_address <=
+			   (long long int)SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE);
 	else
 		assert((long long int)logical_address * VIRTUAL_PAGE_SIZE <=
-		       (long long int)SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE *
-		       BLOCK_SIZE);
+			   (long long int)SSD_SIZE * PACKAGE_SIZE * DIE_SIZE * PLANE_SIZE * BLOCK_SIZE);
 #endif
 
 	/* allocate the event and address dynamically so that the allocator can
@@ -255,42 +229,33 @@ Ssd::event_arrive(enum event_type type, ulong logical_address, uint size,
 	const Address& address = event->get_address();
 	/// Handle the event
 	if (type == READ) {
-		if (bus.lock(address.package, start_time, BUS_CTRL_DELAY, *event) !=
-		        SUCCESS) {
-			fprintf(stderr, "Ssd error: %s: locking bus channel %u for read "
-			        "command failed:\n",
-			        __func__, address.package);
+		if (bus.lock(address.package, start_time, BUS_CTRL_DELAY, *event) != SUCCESS) {
+			fprintf(stderr,
+					"Ssd error: %s: locking bus channel %u for read "
+					"command failed:\n",
+					__func__, address.package);
 		} else {
 			if (data[address.package].read(*event) != SUCCESS)
-				fprintf(stderr, "Ssd error: %s: read request failed:\n",
-				        __func__);
+				fprintf(stderr, "Ssd error: %s: read request failed:\n", __func__);
 			else {
-				if (bus.lock(address.package, start_time,
-				             BUS_CTRL_DELAY + BUS_DATA_DELAY,
-				             *event) != SUCCESS)
-					fprintf(stderr, "Ssd error: %s: locking bus channel %u for "
-					        "read data failed:\n",
-					        __func__, address.package);
+				if (bus.lock(address.package, start_time, BUS_CTRL_DELAY + BUS_DATA_DELAY, *event) != SUCCESS)
+					fprintf(stderr,
+							"Ssd error: %s: locking bus channel %u for "
+							"read data failed:\n",
+							__func__, address.package);
 			}
 		}
 	} else if (type == WRITE) {
-		if (bus.lock(address.package, start_time,
-		             BUS_CTRL_DELAY + BUS_DATA_DELAY, *event) != SUCCESS) {
-			fprintf(
-			    stderr,
-			    "Ssd error: %s: locking bus channel %u for write data failed:\n",
-			    __func__, address.package);
+		if (bus.lock(address.package, start_time, BUS_CTRL_DELAY + BUS_DATA_DELAY, *event) != SUCCESS) {
+			fprintf(stderr, "Ssd error: %s: locking bus channel %u for write data failed:\n", __func__,
+					address.package);
 		} else {
 			if (data[address.package].write(*event) != SUCCESS)
-				fprintf(stderr, "Ssd error: %s: write request failed:\n",
-				        __func__);
+				fprintf(stderr, "Ssd error: %s: write request failed:\n", __func__);
 		}
 
 	} else
-		fprintf(
-		    stderr,
-		    "Ssd error: %s: incoming request was not of type read or write\n",
-		    __func__);
+		fprintf(stderr, "Ssd error: %s: incoming request was not of type read or write\n", __func__);
 	// event -> print();
 
 	/* use start_time as a temporary for returning time taken to service event
@@ -305,33 +270,27 @@ Ssd::event_arrive(enum event_type type, ulong logical_address, uint size,
  * It is up to the user to not read out of bound and only
  * read the intended size. i.e. the page size.
  */
-void*
-Ssd::get_result_buffer()
-{
-	return global_buffer;
-}
+void* Ssd::get_result_buffer() { return global_buffer; }
 
 /* read write erase and merge should only pass on the event
  * 	the Controller should lock the bus channels
  * technically the Package is conceptual, but we keep track of statistics
  * 	and addresses with Packages, so send Events through Package but do not
  * 	have Package do anything but update its statistics and pass on to Die */
-enum status
-Ssd::read(Event& event) {
-	assert(data != NULL && event.get_address().package < size &&
-	       event.get_address().valid >= PACKAGE);
+enum status Ssd::read(Event& event)
+{
+	assert(data != NULL && event.get_address().package < size && event.get_address().valid >= PACKAGE);
 	return data[event.get_address().package].read(event);
 }
 
-enum status
-Ssd::write(Event& event) {
-	assert(data != NULL && event.get_address().package < size &&
-	       event.get_address().valid >= PACKAGE);
+enum status Ssd::write(Event& event)
+{
+	assert(data != NULL && event.get_address().package < size && event.get_address().valid >= PACKAGE);
 	return data[event.get_address().package].write(event);
 }
 
-enum status
-Ssd::replace(Event& event) {
+enum status Ssd::replace(Event& event)
+{
 	if (event.get_replace_address().valid == NONE)
 		return SUCCESS;
 	assert(data != NULL && event.get_replace_address().package < size);
@@ -341,10 +300,9 @@ Ssd::replace(Event& event) {
 		return SUCCESS;
 }
 
-enum status
-Ssd::erase(Event& event) {
-	assert(data != NULL && event.get_address().package < size &&
-	       event.get_address().valid >= PACKAGE);
+enum status Ssd::erase(Event& event)
+{
+	assert(data != NULL && event.get_address().package < size && event.get_address().valid >= PACKAGE);
 	enum status status = data[event.get_address().package].erase(event);
 
 	/* update values if no errors */
@@ -353,15 +311,14 @@ Ssd::erase(Event& event) {
 	return status;
 }
 
-enum status
-Ssd::merge(Event& event) {
-	assert(data != NULL && event.get_address().package < size &&
-	       event.get_address().valid >= PACKAGE);
+enum status Ssd::merge(Event& event)
+{
+	assert(data != NULL && event.get_address().package < size && event.get_address().valid >= PACKAGE);
 	return data[event.get_address().package].merge(event);
 }
 
-enum status
-Ssd::merge_replacement_block(Event&) {
+enum status Ssd::merge_replacement_block(Event&)
+{
 	// assert(data != NULL && event.get_address().package < size &&
 	// event.get_address().valid >= PACKAGE && event.get_log_address().valid >=
 	// PACKAGE);
@@ -369,8 +326,7 @@ Ssd::merge_replacement_block(Event&) {
 }
 
 /* add up the erases remaining for all packages in the ssd*/
-ssd::ulong
-Ssd::get_erases_remaining(const Address& address) const
+ssd::ulong Ssd::get_erases_remaining(const Address& address) const
 {
 	assert(data != NULL);
 
@@ -380,8 +336,7 @@ Ssd::get_erases_remaining(const Address& address) const
 		return erases_remaining;
 }
 
-void
-Ssd::update_wear_stats(const Address& address)
+void Ssd::update_wear_stats(const Address& address)
 {
 	assert(data != NULL);
 	uint i;
@@ -396,8 +351,7 @@ Ssd::update_wear_stats(const Address& address)
 	return;
 }
 
-void
-Ssd::get_least_worn(Address& address) const
+void Ssd::get_least_worn(Address& address) const
 {
 	assert(data != NULL && least_worn < size);
 	address.package = least_worn;
@@ -406,8 +360,7 @@ Ssd::get_least_worn(Address& address) const
 	return;
 }
 
-double
-Ssd::get_last_erase_time(const Address& address) const
+double Ssd::get_last_erase_time(const Address& address) const
 {
 	assert(data != NULL);
 	if (address.package < size && address.valid >= PACKAGE)
@@ -416,30 +369,28 @@ Ssd::get_last_erase_time(const Address& address) const
 		return last_erase_time;
 }
 
-enum page_state
-Ssd::get_state(const Address& address) const {
+enum page_state Ssd::get_state(const Address& address) const
+{
 	assert(data != NULL);
 	assert(address.package < size && address.valid >= PACKAGE);
 	return data[address.package].get_state(address);
 }
 
-enum block_state
-Ssd::get_block_state(const Address& address) const {
+enum block_state Ssd::get_block_state(const Address& address) const
+{
 	assert(data != NULL);
 	assert(address.package < size && address.valid >= PACKAGE);
 	return data[address.package].get_block_state(address);
 }
 
-void
-Ssd::get_free_page(Address& address) const
+void Ssd::get_free_page(Address& address) const
 {
 	assert(address.package < size && address.valid >= PACKAGE);
 	data[address.package].get_free_page(address);
 	return;
 }
 
-ssd::uint
-Ssd::get_num_free(const Address& address) const
+ssd::uint Ssd::get_num_free(const Address& address) const
 {
 #ifndef NOT_USE_BLOCKMGR
 	return 0;
@@ -448,90 +399,59 @@ Ssd::get_num_free(const Address& address) const
 #endif
 }
 
-ssd::uint
-Ssd::get_num_valid(const Address& address) const
+ssd::uint Ssd::get_num_valid(const Address& address) const
 {
 	assert(address.valid >= PACKAGE);
 	return data[address.package].get_num_valid(address);
 }
 
-ssd::uint
-Ssd::get_num_invalid(const Address& address) const
+ssd::uint Ssd::get_num_invalid(const Address& address) const
 {
 	assert(address.valid >= PACKAGE);
 	return data[address.package].get_num_invalid(address);
 }
 
-ssd::Page*
-Ssd::get_page_pointer(const Address& address)
+ssd::Page* Ssd::get_page_pointer(const Address& address)
 {
 	assert(address.valid >= PACKAGE);
 	return data[address.package].get_page_pointer(address);
 }
 
-ssd::Block*
-Ssd::get_block_pointer(const Address& address) const
+ssd::Block* Ssd::get_block_pointer(const Address& address) const
 {
 	assert(address.valid >= PACKAGE);
 	assert(data != NULL);
 	return data[address.package].get_block_pointer(address);
 }
 
-ssd::Plane*
-Ssd::get_plane_pointer(const Address& address)
+ssd::Plane* Ssd::get_plane_pointer(const Address& address)
 {
 	assert(address.valid >= PACKAGE);
 	return data[address.package].get_plane_pointer(address);
 }
 
-void
-Ssd::print_statistics()
+void Ssd::print_statistics() { controller.stats.print_statistics(); }
+
+void Ssd::reset_statistics() { controller.stats.reset_statistics(); }
+
+void Ssd::write_statistics(FILE* stream) { controller.stats.write_statistics(stream); }
+
+void Ssd::print_ftl_statistics() { controller.print_ftl_statistics(); }
+
+void Ssd::write_header(FILE* stream) { controller.stats.write_header(stream); }
+
+void Ssd::write_statistics_csv(std::string fileName, uint runID)
 {
-	controller.stats.print_statistics();
+	controller.stats.write_statistics_csv(fileName, runID, *this);
 }
 
-void
-Ssd::reset_statistics()
-{
-	controller.stats.reset_statistics();
-}
-
-void
-Ssd::write_statistics(FILE* stream)
-{
-	controller.stats.write_statistics(stream);
-}
-
-void
-Ssd::print_ftl_statistics()
-{
-	controller.print_ftl_statistics();
-}
-
-void
-Ssd::write_header(FILE* stream)
-{
-	controller.stats.write_header(stream);
-}
-
-void
-Ssd::write_statistics_csv(std::string fileName, uint runID)
-{
-    controller.stats.write_statistics_csv(fileName, runID);
-}
-
-const Controller&
-Ssd::get_controller(void) const
-{
-	return controller;
-}
+const Controller& Ssd::get_controller(void) const { return controller; }
 
 /**
  * Returns the next ready time. The ready time is the latest point in time when
  * one of the channels are ready to serve new requests.
  */
-double
-Ssd::ready_at(void)
+double Ssd::ready_at(void)
 {
 	double next_ready_time = std::numeric_limits<double>::max();
 
@@ -548,44 +468,45 @@ Ssd::ready_at(void)
 		return next_ready_time;
 }
 
-uint
-Ssd::get_pages_valid(const Address& address) const
+uint Ssd::get_pages_valid(const Address& address) const
 {
 	assert(address.valid >= PACKAGE);
 	return data[address.package].get_pages_valid(address);
 }
 
-uint
-Ssd::get_pages_invalid(const Address& address) const
+uint Ssd::get_pages_invalid(const Address& address) const
 {
 	assert(address.valid >= PACKAGE);
 	return data[address.package].get_pages_invalid(address);
 }
 
-uint
-Ssd::get_pages_erased(const Address& address) const
+uint Ssd::get_pages_erased(const Address& address) const
 {
 	assert(address.valid >= PACKAGE);
 	return data[address.package].get_pages_erased(address);
 }
 
-void
-Ssd::set_block_hotness(const Address& address, const bool hotness)
+void Ssd::set_block_hotness(const Address& address, const bool hotness)
 {
 	assert(address.valid >= PACKAGE);
 	data[address.package].set_block_hotness(address, hotness);
 	assert(get_block_hotness(address) == hotness);
 }
 
-bool
-Ssd::get_block_hotness(const Address& address) const
+bool Ssd::get_block_hotness(const Address& address) const
 {
 	assert(address.valid >= PACKAGE);
-	return data[address.package].get_block_hotness(address);
+    return data[address.package].get_block_hotness(address);
 }
 
-enum status
-Ssd::get_next_page(Address& address) const {
+ulong Ssd::get_block_erase_count(const Address& address) const
+{
+    assert(address.valid >= PACKAGE);
+    return data[address.package].get_block_erase_count(address);
+}
+
+enum status Ssd::get_next_page(Address& address) const
+{
 	assert(address.valid >= PACKAGE);
 	data[address.package].get_next_page(address);
 	return SUCCESS;

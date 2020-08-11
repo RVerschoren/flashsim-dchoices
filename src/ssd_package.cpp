@@ -32,26 +32,20 @@
 
 using namespace ssd;
 
-Package::Package(const ssd::Ssd& parent, Channel& channel, uint package_size,
-                 long physical_address)
-	: size(package_size)
-	,
+Package::Package(const ssd::Ssd& parent, Channel& channel, uint package_size, long physical_address)
+    : size(package_size),
 
 	  /* use a const pointer (Die * const data) to use as an array
 	   * but like a reference, we cannot reseat the pointer */
-	  data((Die*)malloc(package_size * sizeof(Die)))
-	, parent(parent)
-	,
+      data((Die*)malloc(package_size * sizeof(Die))), parent(parent),
 
 	  /* assume all Dies are same so first one can start as least worn */
-	  least_worn(0)
-	,
+      least_worn(0),
 
 	  /* set erases remaining to BLOCK_ERASES to match Block constructor args
 	   * in Plane class
 	   * this is the cheap implementation but can change to pass through classes */
-	  erases_remaining(BLOCK_ERASES)
-	,
+      erases_remaining(BLOCK_ERASES),
 
 	  /* assume hardware created at time 0 and had an implied free erasure */
 	  last_erase_time(0.0)
@@ -66,16 +60,12 @@ Package::Package(const ssd::Ssd& parent, Channel& channel, uint package_size,
 	/* array allocated in initializer list:
 	 *	data = (Die *) malloc(size * sizeof(Die)); */
 	if (data == NULL) {
-		fprintf(stderr,
-		        "Package error: %s: constructor unable to allocate Die data\n",
-		        __func__);
+        fprintf(stderr, "Package error: %s: constructor unable to allocate Die data\n", __func__);
 		exit(MEM_ERR);
 	}
 
 	for (i = 0; i < size; i++)
-		(void)new (&data[i])
-		Die(*this, channel, DIE_SIZE,
-		    physical_address + (DIE_SIZE * PLANE_SIZE * BLOCK_SIZE * i));
+        (void)new (&data[i]) Die(*this, channel, DIE_SIZE, physical_address + (DIE_SIZE * PLANE_SIZE * BLOCK_SIZE * i));
 
 	return;
 }
@@ -92,53 +82,44 @@ Package::~Package(void)
 	return;
 }
 
-enum status
-Package::read(Event& event) {
-	assert(data != NULL && event.get_address().die < size &&
-	       event.get_address().valid > PACKAGE);
+enum status Package::read(Event& event)
+{
+    assert(data != NULL && event.get_address().die < size && event.get_address().valid > PACKAGE);
 	return data[event.get_address().die].read(event);
 }
 
-enum status
-Package::write(Event& event) {
-	assert(data != NULL && event.get_address().die < size &&
-	       event.get_address().valid > PACKAGE);
+enum status Package::write(Event& event)
+{
+    assert(data != NULL && event.get_address().die < size && event.get_address().valid > PACKAGE);
 	return data[event.get_address().die].write(event);
 }
 
-enum status
-Package::replace(Event& event) {
+enum status Package::replace(Event& event)
+{
 	assert(data != NULL);
 	return data[event.get_replace_address().die].replace(event);
 }
 
-enum status
-Package::erase(Event& event) {
-	assert(data != NULL && event.get_address().die < size &&
-	       event.get_address().valid > PACKAGE);
+enum status Package::erase(Event& event)
+{
+    assert(data != NULL && event.get_address().die < size && event.get_address().valid > PACKAGE);
 	enum status status = data[event.get_address().die].erase(event);
 	if (status == SUCCESS)
 		update_wear_stats(event.get_address());
 	return status;
 }
 
-enum status
-Package::merge(Event& event) {
-	assert(data != NULL && event.get_address().die < size &&
-	       event.get_address().valid > PACKAGE);
+enum status Package::merge(Event& event)
+{
+    assert(data != NULL && event.get_address().die < size && event.get_address().valid > PACKAGE);
 	return data[event.get_address().die].merge(event);
 }
 
-const Ssd&
-Package::get_parent(void) const
-{
-	return parent;
-}
+const Ssd& Package::get_parent(void) const { return parent; }
 
 /* if given a valid Block address, call the Block's method
  * else return local value */
-double
-Package::get_last_erase_time(const Address& address) const
+double Package::get_last_erase_time(const Address& address) const
 {
 	assert(data != NULL);
 	if (address.valid > PACKAGE && address.die < size)
@@ -149,8 +130,7 @@ Package::get_last_erase_time(const Address& address) const
 
 /* if given a valid Die address, call the Die's method
  * else return local value */
-ssd::ulong
-Package::get_erases_remaining(const Address& address) const
+ssd::ulong Package::get_erases_remaining(const Address& address) const
 {
 	assert(data != NULL);
 	if (address.valid > PACKAGE && address.die < size)
@@ -159,16 +139,14 @@ Package::get_erases_remaining(const Address& address) const
 		return erases_remaining;
 }
 
-ssd::uint
-ssd::Package::get_num_invalid(const Address& address) const
+ssd::uint ssd::Package::get_num_invalid(const Address& address) const
 {
 	assert(address.valid >= DIE);
 	return data[address.die].get_num_invalid(address);
 }
 
 /* Plane with the most erases remaining is the least worn */
-void
-Package::update_wear_stats(const Address& address)
+void Package::update_wear_stats(const Address& address)
 {
 	uint i;
 	uint max_index = 0;
@@ -183,8 +161,7 @@ Package::update_wear_stats(const Address& address)
 }
 
 /* update given address -> package to least worn package */
-void
-Package::get_least_worn(Address& address) const
+void Package::get_least_worn(Address& address) const
 {
 	assert(least_worn < size);
 	address.die = least_worn;
@@ -193,99 +170,94 @@ Package::get_least_worn(Address& address) const
 	return;
 }
 
-enum page_state
-Package::get_state(const Address& address) const {
+enum page_state Package::get_state(const Address& address) const
+{
 	assert(data != NULL && address.die < size && address.valid >= PACKAGE);
 	return data[address.die].get_state(address);
 }
 
-enum block_state
-Package::get_block_state(const Address& address) const {
+enum block_state Package::get_block_state(const Address& address) const
+{
 	assert(data != NULL && address.die < size && address.valid >= PACKAGE);
 	return data[address.die].get_block_state(address);
 }
 
-void
-Package::get_free_page(Address& address) const
+void Package::get_free_page(Address& address) const
 {
 	assert(address.die < size && address.valid >= DIE);
 	data[address.die].get_free_page(address);
 	return;
 }
-ssd::uint
-Package::get_num_free(const Address& address) const
+ssd::uint Package::get_num_free(const Address& address) const
 {
 	assert(address.valid >= DIE);
 	return data[address.die].get_num_free(address);
 }
 
-ssd::uint
-Package::get_num_valid(const Address& address) const
+ssd::uint Package::get_num_valid(const Address& address) const
 {
 	assert(address.valid >= DIE);
 	return data[address.die].get_num_valid(address);
 }
 
-ssd::Page*
-Package::get_page_pointer(const Address& addr)
+ssd::Page* Package::get_page_pointer(const Address& addr)
 {
 	assert(addr.valid >= DIE);
 	return data[addr.die].get_page_pointer(addr);
 }
 
-Block*
-Package::get_block_pointer(const Address& address) const
+Block* Package::get_block_pointer(const Address& address) const
 {
 	assert(address.valid >= DIE);
 	return data[address.die].get_block_pointer(address);
 }
 
-ssd::Plane*
-Package::get_plane_pointer(const Address& addr)
+ssd::Plane* Package::get_plane_pointer(const Address& addr)
 {
 	assert(addr.valid >= DIE);
 	return data[addr.die].get_plane_pointer(addr);
 }
 
-uint
-Package::get_pages_valid(const Address& address) const
+uint Package::get_pages_valid(const Address& address) const
 {
 	assert(address.valid >= DIE);
-	return data[address.die].get_pages_valid(address);
+	return data[address.die].get_block_pages_valid(address);
 }
 
-uint
-Package::get_pages_invalid(const Address& address) const
+uint Package::get_pages_invalid(const Address& address) const
 {
 	assert(address.valid >= DIE);
-	return data[address.die].get_pages_invalid(address);
+	return data[address.die].get_block_pages_invalid(address);
 }
 
-uint
-Package::get_pages_erased(const Address& address) const
+uint Package::get_pages_erased(const Address& address) const
 {
 	assert(address.valid >= DIE);
-	return data[address.die].get_pages_erased(address);
+	return data[address.die].get_block_pages_erased(address);
 }
 
-void
-Package::set_block_hotness(const Address& address, const bool hotness)
+void Package::set_block_hotness(const Address& address, const bool hotness)
 {
 	assert(address.valid >= DIE);
 	data[address.die].set_block_hotness(address, hotness);
 	assert(get_block_hotness(address) == hotness);
 }
 
-bool
-Package::get_block_hotness(const Address& address) const
+bool Package::get_block_hotness(const Address& address) const
 {
 	assert(address.valid >= DIE);
 	return data[address.die].get_block_hotness(address);
 }
 
-enum status
-Package::get_next_page(Address& address) const {
+enum status Package::get_next_page(Address& address) const
+{
 	assert(address.valid >= DIE);
 	data[address.die].get_next_page(address);
-	return SUCCESS;
+    return SUCCESS;
+}
+
+ulong Package::get_block_erase_count(const Address& address) const
+{
+    assert(address.valid >= DIE);
+    return data[address.die].get_block_erase_count(address);
 }

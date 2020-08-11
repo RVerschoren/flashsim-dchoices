@@ -30,8 +30,10 @@
 #include <new>
 #include <stdio.h>
 #include <stdlib.h>
+#ifndef _WIN32
 #include <sys/mman.h>
 #include <unistd.h>
+#endif
 
 using namespace ssd;
 

@@ -25,34 +25,28 @@
  */
 
 #include "ssd.h"
-#include <assert.h>
-#include <new>
-#include <stdio.h>
+#include <algorithm>
+#include <cassert>
+#include <iostream>
+#include <vector>
 
 using namespace ssd;
 
-WLvlImpl_RandomSwap::WLvlImpl_RandomSwap(FtlParent* ftl, const double p)
-	: Wear_leveler(ftl)
-	, p(p)
-{
-}
+WLvlImpl_RandomSwap::WLvlImpl_RandomSwap(FtlParent* ftl, const double p) : Wear_leveler(ftl), p(p) {}
 
-WLvlImpl_RandomSwap::~WLvlImpl_RandomSwap()
-{
-}
+WLvlImpl_RandomSwap::~WLvlImpl_RandomSwap() = default;
 
-enum status
-WLvlImpl_RandomSwap::suggest_WF(Address& /*WFSuggestion*/,
-                                const std::vector<Address>& /*doNotPick*/) {
+enum status WLvlImpl_RandomSwap::suggest_WF(Event& /*evt*/, Address& /*WFSuggestion*/, Controller& /*controller*/,
+											const std::vector<Address>& /*doNotPick*/)
+{
 	return FAILURE;
 }
 
-/// TODO enable evt
-enum status
-WLvlImpl_RandomSwap::prewrite(Event& evt, Controller& controller,
-                              const std::vector<Address>& doNotPick) {
-	if (RandNrGen::get() < p)
-	{
+enum status WLvlImpl_RandomSwap::prewrite(Event& evt, Controller& controller, const std::vector<Address>& doNotPick)
+{
+    auto finishedWLvl = FAILURE;
+    double tmpProb = p;
+    while (RandNrGen::get() < tmpProb) {
 
 		// Pick a random block
 		Address block1(0, 0, 0, 0, 0, BLOCK), block2(0, 0, 0, 0, 0, BLOCK);
@@ -70,16 +64,16 @@ WLvlImpl_RandomSwap::prewrite(Event& evt, Controller& controller,
 		assert(block2.plane < DIE_SIZE);
 		assert(block2.block < PLANE_SIZE);
 
-        FTL->swap(evt, block1, block2);
+		FTL->swap(evt, block1, block2);
 
 		const uint intW1 = controller.get_pages_valid(block1);
 		const uint intW2 = controller.get_pages_valid(block2);
 		controller.stats.swap_blocks(intW1 + intW2);
-#ifdef DEBUG
-		std::cout << "INSERTED RANDOM SWAP at" << controller.stats.numGCErase
-		          << std::endl;
+#ifndef NDEBUG
+		std::cout << "INSERTED RANDOM SWAP at" << controller.stats.numGCErase << std::endl;
 #endif
-		return SUCCESS;
+        tmpProb = tmpProb - 1.0;
+        finishedWLvl = SUCCESS;
 	}
-	return FAILURE;
+    return finishedWLvl;
 }

@@ -22,12 +22,12 @@
  */
 
 #include "util.h"
-#include <fstream>
+#include <cmath>
 #include <iomanip>
-#include <iostream>
+#include <sstream>
+#include <string>
 
-std::string
-space_to_zero(std::string text)
+std::string space_to_zero(std::string text)
 {
 	for (std::string::iterator it = text.begin(); it != text.end(); ++it) {
 		if (*it == ' ') {
@@ -37,8 +37,7 @@ space_to_zero(std::string text)
 	return text;
 }
 
-std::string
-print_fract(const double d, const unsigned int width)
+std::string print_fract(const double d, const unsigned int width)
 {
 	// Fractional part as string
 	const int fraction = std::pow(10, width) * (d - std::floor(d));
@@ -47,8 +46,7 @@ print_fract(const double d, const unsigned int width)
 	return space_to_zero(ss.str());
 }
 
-std::string
-num2str(const unsigned int num)
+std::string num2str(const unsigned int num)
 {
 	std::stringstream ss;
 	ss << num;
@@ -56,18 +54,13 @@ num2str(const unsigned int num)
 }
 
 ///@TODO Remove
-std::string
-create_oracle_filename(const std::string traceID, const double f,
-                       const unsigned int nrFrames)
+std::string create_oracle_filename(const std::string traceID, const double f, const unsigned int nrFrames)
 {
-    return (traceID + "-" + print_fract(f) + "-" + num2str(nrFrames) +
-            "-oracle.csv");
+	return (traceID + "-" + print_fract(f) + "-" + num2str(nrFrames) + "-oracle.csv");
 }
 
-std::string
-create_oracle_filename(const std::string directory, const std::string traceID, const double f,
-                       const unsigned int nrFrames)
+std::string create_oracle_filename(const std::string directory, const std::string traceID, const double f,
+								   const unsigned int nrFrames)
 {
-    return (directory + traceID + "-" + print_fract(f) + "-" + num2str(nrFrames) +
-	        "-oracle.csv");
+	return (directory + traceID + "-" + print_fract(f) + "-" + num2str(nrFrames) + "-oracle.csv");
 }

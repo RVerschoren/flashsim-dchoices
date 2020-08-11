@@ -29,29 +29,16 @@
 
 using namespace ssd;
 
-EventReader::EventReader(const std::string traceFileName, const ulong numEvents,
-                         const EVENT_READER_MODE mode)
-	: readMode(mode)
-	, traceFileName(traceFileName)
-	, oracleFileName("")
-	, currentEvent(0)
-	, numEvents(numEvents)
-	, usingOracle(false)
-	, traceStream(traceFileName)
+EventReader::EventReader(const std::string traceFileName, const ulong numEvents, const EVENT_READER_MODE mode)
+	: readMode(mode), traceFileName(traceFileName), oracleFileName(""), currentEvent(0), numEvents(numEvents),
+	  usingOracle(false), traceStream(traceFileName)
 {
 }
 
-EventReader::EventReader(const std::string traceFileName, const ulong numEvents,
-                         const EVENT_READER_MODE mode,
-                         const std::string oracleFileName)
-	: readMode(mode)
-	, traceFileName(traceFileName)
-	, oracleFileName(oracleFileName)
-	, currentEvent(0)
-	, numEvents(numEvents)
-	, usingOracle(true)
-	, traceStream(traceFileName)
-	, oracleStream(oracleFileName)
+EventReader::EventReader(const std::string traceFileName, const ulong numEvents, const EVENT_READER_MODE mode,
+						 const std::string oracleFileName)
+	: readMode(mode), traceFileName(traceFileName), oracleFileName(oracleFileName), currentEvent(0),
+	  numEvents(numEvents), usingOracle(true), traceStream(traceFileName), oracleStream(oracleFileName)
 {
 }
 
@@ -59,22 +46,22 @@ EventReader::EventReader(const std::string traceFileName, const ulong numEvents,
 void EventReader::read_oracle(const std::string &filename, std::vector<Event>
 &events)
 {
-    std::ifstream data(filename);
-    std::vector<bool> oracle;
-    std::string line;
-    while(std::getline(data,line))
-    {
-        std::stringstream  lineStream(line);
-        std::string        cell;
-        std::getline(lineStream,cell,',');
-        const bool value = std::stoi(cell) != 0;
-        oracle.push_back(value);
-    }
-    assert(oracle.size() == events.size());
-    for(ulong it = 0; it < events.size(); it++)
-    {
-        events[it].set_hot(oracle[it]);
-    }
+	std::ifstream data(filename);
+	std::vector<bool> oracle;
+	std::string line;
+	while(std::getline(data,line))
+	{
+		std::stringstream  lineStream(line);
+		std::string        cell;
+		std::getline(lineStream,cell,',');
+		const bool value = std::stoi(cell) != 0;
+		oracle.push_back(value);
+	}
+	assert(oracle.size() == events.size());
+	for(ulong it = 0; it < events.size(); it++)
+	{
+		events[it].set_hot(oracle[it]);
+	}
 }*/
 /**
  * @brief Reads events from a trace file
@@ -82,8 +69,7 @@ void EventReader::read_oracle(const std::string &filename, std::vector<Event>
  * @param readLine Function to convert a line of the tracefile to an ssd::Event
  * @return Vector of ssd::Events
  */
-std::vector<Event>
-EventReader::read_events_from_trace(const std::string& filename) const
+std::vector<Event> EventReader::read_events_from_trace(const std::string& filename) const
 {
 	std::ifstream data(filename);
 	std::string line;
@@ -94,8 +80,7 @@ EventReader::read_events_from_trace(const std::string& filename) const
 	return events;
 }
 
-std::vector<IOEvent>
-EventReader::read_IO_events_from_trace(const std::string& filename) const
+std::vector<IOEvent> EventReader::read_IO_events_from_trace(const std::string& filename) const
 {
 	std::ifstream data(filename);
 	std::string line;
@@ -106,8 +91,7 @@ EventReader::read_IO_events_from_trace(const std::string& filename) const
 	return events;
 }
 
-bool
-EventReader::read_next_oracle()
+bool EventReader::read_next_oracle()
 {
 	std::string line;
 	while (std::getline(oracleStream, line)) {
@@ -119,8 +103,7 @@ EventReader::read_next_oracle()
 	return false;
 }
 
-Event
-EventReader::read_next_event()
+Event EventReader::read_next_event()
 {
 	if (currentEvent == numEvents) {
 		traceStream.seekg(0);
@@ -135,9 +118,7 @@ EventReader::read_next_event()
 	return events[0];
 }
 
-void
-EventReader::read_IO_event(const std::string& line,
-                           std::vector<IOEvent>& events) const
+void EventReader::read_IO_event(const std::string& line, std::vector<IOEvent>& events) const
 {
 	switch (readMode) {
 	case EVTRDR_SIMPLE:
@@ -151,9 +132,7 @@ EventReader::read_IO_event(const std::string& line,
 	}
 }
 
-void
-EventReader::read_IO_event_simple(const std::string& line,
-                                  std::vector<IOEvent>& events) const
+void EventReader::read_IO_event_simple(const std::string& line, std::vector<IOEvent>& events) const
 {
 	const char delim = ',';
 	std::stringstream lineStream(line);
@@ -161,14 +140,12 @@ EventReader::read_IO_event_simple(const std::string& line,
 	std::getline(lineStream, cell, delim);
 	const unsigned long startAddress = cell.empty() ? 0UL : std::stoul(cell);
 	std::getline(lineStream, cell, delim);
-	const event_type type =
-	    (cell.empty() or std::stoi(cell) != 0) ? WRITE : TRIM;
+	const event_type type = (cell.empty() or std::stoi(cell) == 0) ? READ : WRITE;
+	/// FIXME ORIGINAL const event_type type = (cell.empty() or std::stoi(cell) != 0) ? WRITE : TRIM;
 	events.push_back(IOEvent(type, startAddress, 1));
 }
 
-void
-EventReader::read_IO_event_BIOtracer(const std::string& line,
-                                     std::vector<IOEvent>& events) const
+void EventReader::read_IO_event_BIOtracer(const std::string& line, std::vector<IOEvent>& events) const
 {
 	const char delim = '\t';
 	std::stringstream lineStream(line);
@@ -199,8 +176,7 @@ EventReader::read_IO_event_BIOtracer(const std::string& line,
 	// return IOEvent(type, startAddress, numSectors);
 }
 
-std::string
-EventReader::write_event(const Event& e) const
+std::string EventReader::write_event(const Event& e) const
 {
 	switch (readMode) {
 	case EVTRDR_SIMPLE:
@@ -214,9 +190,7 @@ EventReader::write_event(const Event& e) const
 	}
 }
 
-void
-EventReader::read_event(const std::string& line,
-                        std::vector<Event>& events) const
+void EventReader::read_event(const std::string& line, std::vector<Event>& events) const
 {
 	switch (readMode) {
 	case EVTRDR_SIMPLE:
@@ -230,9 +204,7 @@ EventReader::read_event(const std::string& line,
 	}
 }
 
-void
-EventReader::read_event_simple(const std::string& line,
-                               std::vector<Event>& events) const
+void EventReader::read_event_simple(const std::string& line, std::vector<Event>& events) const
 {
 	const char delim = ',';
 	std::stringstream lineStream(line);
@@ -240,24 +212,20 @@ EventReader::read_event_simple(const std::string& line,
 	std::getline(lineStream, cell, delim);
 	const unsigned long startAddress = cell.empty() ? 0UL : std::stoul(cell);
 	std::getline(lineStream, cell, delim);
-	const event_type type =
-	    (cell.empty() or std::stoi(cell) != 0) ? WRITE : TRIM;
-	/// TODO Find a better solution than zero start times to determine the right
-	/// start time
+	// const event_type type = (cell.empty() or std::stoi(cell) != 0) ? WRITE : TRIM;
+	const event_type type = (cell.empty() or std::stoi(cell) == 0) ? READ : WRITE;
+	/// FIXME Find a better solution than zero start times to determine the right start time
 	// return Event(type, startAddress, 1, 0.0);
 	events.push_back(Event(type, startAddress, 1, 0.0));
 }
 
-std::string
-EventReader::write_event_simple(const Event& evt) const
+std::string EventReader::write_event_simple(const Event& evt) const
 {
 	const std::string typeStr = (evt.get_event_type() == TRIM) ? "0" : "1";
 	return (std::to_string(evt.get_logical_address()) + "," + typeStr);
 }
 
-void
-EventReader::read_event_BIOtracer(const std::string& line,
-                                  std::vector<Event>& events) const
+void EventReader::read_event_BIOtracer(const std::string& line, std::vector<Event>& events) const
 {
 	const char delim = '\t';
 	std::stringstream lineStream(line);
@@ -297,21 +265,17 @@ EventReader::read_event_BIOtracer(const std::string& line,
 	// return Event(type, startAddress, numSectors, startTime);
 }
 
-std::string
-EventReader::write_event_BIOtracer(const Event& evt) const
+std::string EventReader::write_event_BIOtracer(const Event& evt) const
 {
 	const std::string delim = "\t\t";
 	const std::string emptyCell = "0";
 	const std::string typeStr = (evt.get_event_type() == READ) ? "0" : "1";
-	return (std::to_string(evt.get_logical_address()) + delim +
-	        std::to_string(evt.get_size() * 8) + delim +
-	        std::to_string(evt.get_size() * 4096) + delim + typeStr + delim +
-	        emptyCell + delim + emptyCell + delim +
-	        std::to_string(evt.get_start_time()));
+	return (std::to_string(evt.get_logical_address()) + delim + std::to_string(evt.get_size() * 8) + delim +
+			std::to_string(evt.get_size() * 4096) + delim + typeStr + delim + emptyCell + delim + emptyCell + delim +
+			std::to_string(evt.get_start_time()));
 }
 
-ulong
-EventReader::find_max_lpn(const std::vector<IOEvent>& events) const
+ulong EventReader::find_max_lpn(const std::vector<IOEvent>& events) const
 {
 	ulong maxLPN = -std::numeric_limits<ulong>::infinity();
 	for (const IOEvent& evt : events) {

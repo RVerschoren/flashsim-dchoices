@@ -26,24 +26,17 @@
 
 using namespace ssd;
 
-GCImpl_Random::GCImpl_Random(FtlParent* ftl)
-	: Garbage_collector(ftl)
-{
-}
+GCImpl_Random::GCImpl_Random(FtlParent* ftl) : Garbage_collector(ftl) {}
 
-GCImpl_Random::~GCImpl_Random()
-{
-}
+GCImpl_Random::~GCImpl_Random() {}
 
-void
-GCImpl_Random::collect(const Event& /*event*/, Address& addr,
-                       const std::function<bool(const Address&)>& ignorePred)
+void GCImpl_Random::collect(const Event& /*event*/, Address& addr,
+                            const std::function<bool(const Address&)>& ignorePred, bool /*replacingHotBlock*/)
 {
     /*std::function<bool(const Address&)> ignorePred = [this, &doNotPick](
-	const Address& addr) {
-		return block_is_in_vector(addr, doNotPick);
+        const Address& addr) {
+                return block_is_in_vector(addr, doNotPick);
     };*/
-	random_block(addr, ignorePred);
-	assert(addr.valid ==
-	       PAGE); // addr.valid = PAGE; // Make sure this is the case
+    random_block_same_plane(addr, ignorePred);
+    assert(addr.valid == PAGE); // addr.valid = PAGE; // Make sure this is the case
 }

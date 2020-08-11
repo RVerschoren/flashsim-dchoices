@@ -1,0 +1,2 @@
+% This is the documentation of mex_ssd
+function ret = mex_target_output_name(input1)

@@ -1,6 +1,6 @@
 /* Copyright 2017 Robin Verschoren */
 
-/* ban_wlvl.cpp */
+/* hotcoldswap_wlvl.cpp */
 
 /* FlashSim is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,10 +17,9 @@
 
 /****************************************************************************/
 
-/* WLvlImpl_Ban_Prob class
+/* WLvlImpl_HotColdSwap class
  *
- * Class implementing the Ban wear leveling scheme, which cleans a random block
- * with a probability p.
+ * Class implementing a wear leveling scheme which swaps the contents of 2 random blocks with a probability p.
  */
 
 #include "ssd.h"
@@ -30,26 +29,21 @@
 
 using namespace ssd;
 
-WLvlImpl_HotColdSwap::WLvlImpl_HotColdSwap(FtlParent* ftl, const double p)
-	: Wear_leveler(ftl)
-	, p(p)
-{
-}
+WLvlImpl_HotColdSwap::WLvlImpl_HotColdSwap(FtlParent* ftl, const double p) : Wear_leveler(ftl), p(p) {}
 
-WLvlImpl_HotColdSwap::~WLvlImpl_HotColdSwap()
-{
-}
+WLvlImpl_HotColdSwap::~WLvlImpl_HotColdSwap() {}
 
-enum status
-WLvlImpl_HotColdSwap::suggest_WF(Address& /*WFSuggestion*/,
-                                 const std::vector<Address>& /*doNotPick*/) {
+enum status WLvlImpl_HotColdSwap::suggest_WF(Event& /*evt*/, Address& /*WFSuggestion*/, Controller& /*controller*/,
+                                             const std::vector<Address>& /*doNotPick*/)
+{
 	return FAILURE;
 }
 
-enum status
-WLvlImpl_HotColdSwap::prewrite(Event& evt, Controller& controller,
-                               const std::vector<Address>& doNotPick) {
-	if (RandNrGen::get() < p)   // Pick a random block
+enum status WLvlImpl_HotColdSwap::prewrite(Event& evt, Controller& controller, const std::vector<Address>& doNotPick)
+{
+    auto finishedWLvl = FAILURE;
+    double tmpProb = p;
+    while (RandNrGen::get() < tmpProb) // Pick a random block
 	{
 		Address hot;
 		bool selectHot = true;
@@ -57,9 +51,9 @@ WLvlImpl_HotColdSwap::prewrite(Event& evt, Controller& controller,
 		bool selectCold = true;
 		do {
 
-            Address candidate(evt.get_address());
-            candidate.valid=BLOCK;
-            random_block(candidate);
+			Address candidate(evt.get_address());
+            candidate.valid = BLOCK;
+			random_block(candidate);
 			if (not block_is_in_vector(candidate, doNotPick)) {
 				if (FTL->get_block_hotness(candidate)) {
 					if (selectHot) {
@@ -73,16 +67,17 @@ WLvlImpl_HotColdSwap::prewrite(Event& evt, Controller& controller,
 			}
 		} while (selectHot or selectCold);
 		// SWAP HOT AND COLD BLOCKS
-        FTL->swap(evt, hot, cold);
+		FTL->swap(evt, hot, cold);
 
 		const uint intWHot = controller.get_pages_valid(hot);
 		const uint intWCold = controller.get_pages_valid(cold);
 		controller.stats.swap_blocks(intWHot + intWCold);
-#ifdef DEBUG
+#ifndef NDEBUG
 // std::cout << "INSERTED HOTCOLD SWAP at" << FTL->controller.stats.numGCErase
 // << std::endl;
 #endif
-		return SUCCESS;
+        tmpProb = tmpProb - 1.0;
+        finishedWLvl = SUCCESS;
 	}
-	return FAILURE;
+    return finishedWLvl;
 }

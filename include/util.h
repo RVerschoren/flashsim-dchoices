@@ -33,7 +33,7 @@
 
 class RandNrGen final
 {
-public:
+	public:
 	//    static RandNrGen& getInstance();
 
 	/**
@@ -63,7 +63,7 @@ public:
 	 */
 	static unsigned int get(unsigned int S);
 
-private:
+	private:
 	// Singleton
 	RandNrGen();
 	~RandNrGen() = default;
@@ -81,11 +81,8 @@ std::string space_to_zero(std::string text);
 std::string print_fract(const double d, const unsigned int width = 3);
 std::string num2str(const unsigned int num);
 ///@TODO Remove first function below
-std::string create_oracle_filename(const std::string traceID,
-                                   const double hotFraction,
-                                   const unsigned int nrFrames);
-std::string create_oracle_filename(const std::string directory, const std::string traceID,
-                                   const double hotFraction,
-                                   const unsigned int nrFrames);
+std::string create_oracle_filename(const std::string traceID, const double hotFraction, const unsigned int nrFrames);
+std::string create_oracle_filename(const std::string directory, const std::string traceID, const double hotFraction,
+								   const unsigned int nrFrames);
 
 #endif

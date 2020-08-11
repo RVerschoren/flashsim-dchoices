@@ -27,219 +27,152 @@
  */
 
 #include "ssd.h"
+#include <cassert>
 #include <stdio.h>
 
 using namespace ssd;
 
-Address::Address(void)
-	: package(0)
-	, die(0)
-	, plane(0)
-	, block(0)
-	, page(0)
-	, valid(NONE)
-{
-	return;
-}
+Address::Address(void) : package(0), die(0), plane(0), block(0), page(0), valid(NONE) { return; }
 
 Address::Address(const Address& address)
 {
-	*this = address;
-	return;
+        *this = address;
+        return;
 }
 
 Address::Address(const Address* address)
 {
-	*this = *address;
-	return;
+        *this = *address;
+        return;
 }
 
 /* see "enum address_valid" in ssd.h for details on valid status */
-Address::Address(uint /*package*/, uint /*die*/, uint /*plane*/, uint block,
-                 uint page, enum address_valid valid)
-	:
-#ifndef SINGLE_PLANE
-	package(package)
-	, die(die)
-	, plane(plane)
-#else
-	package(0)
-	, die(0)
-	, plane(0)
-#endif
-	, block(block)
-	, page(page)
-	, valid(valid)
+Address::Address(uint package, uint die, uint plane, uint block, uint page, enum address_valid valid)
+    : package(package), die(die), plane(plane), block(block), page(page), valid(valid)
 {
-	return;
+        return;
 }
 
-Address::Address(uint /*address*/, enum address_valid valid)
-	: valid(valid)
+Address::Address(uint /*address*/, enum address_valid valid) : valid(valid)
 {
 #ifndef NOT_USE_BLOCKMGR
-	set_linear_address(address);
+        set_linear_address(address);
 #endif
 }
 
-Address::~Address()
-{
-	return;
-}
+Address::~Address() = default;
 
 /* default values for parameters are the global settings
  * see "enum address_valid" in ssd.h for details on valid status
  * note that method only checks for out-of-bounds types of errors */
-enum address_valid
-Address::check_valid(uint /*ssd_size*/, uint /*package_size*/,
-                     uint /*die_size*/, uint plane_size, uint block_size) {
-	enum address_valid tmp = NONE;
+enum address_valid Address::check_valid(uint ssd_size, uint package_size, uint die_size, uint plane_size,
+                                        uint block_size)
+{
+        enum address_valid tmp = NONE;
 
-#ifndef SINGLE_PLANE
-	/* must check current valid status first
-	 * so we cannot expand the valid status */
-	if (valid >= PACKAGE && package < ssd_size)
-	{
-		tmp = PACKAGE;
-		if (valid >= DIE && die < package_size) {
-			tmp = DIE;
-			if (valid >= PLANE && plane < die_size) {
-				tmp = PLANE;
-#endif
-				if (valid >= BLOCK && block < plane_size) {
-					tmp = BLOCK;
-					if (valid >= PAGE && page < block_size)
-						tmp = PAGE;
-				}
-#ifndef SINGLE_PLANE
-			}
-		}
-	} else
-		tmp = NONE;
-#endif
-	valid = tmp;
-	return valid;
+        /* must check current valid status first
+         * so we cannot expand the valid status */
+        if (valid >= PACKAGE && package < ssd_size) {
+                tmp = PACKAGE;
+                if (valid >= DIE && die < package_size) {
+                        tmp = DIE;
+                        if (valid >= PLANE && plane < die_size) {
+                                tmp = PLANE;
+                                if (valid >= BLOCK && block < plane_size) {
+                                        tmp = BLOCK;
+                                        if (valid >= PAGE && page < block_size)
+                                                tmp = PAGE;
+                                }
+                        }
+                }
+        } else
+                tmp = NONE;
+        valid = tmp;
+        return valid;
 }
 
 /* returns enum indicating to what level two addresses match
  * limits comparison to the fields that are valid */
-enum address_valid
-Address::compare(const Address& address) const {
-	enum address_valid match = NONE;
-#ifndef SINGLE_PLANE
-	if (package == address.package && valid >= PACKAGE &&
-	        address.valid >= PACKAGE)
-	{
-		match = PACKAGE;
-		if (die == address.die && valid >= DIE && address.valid >= DIE) {
-			match = DIE;
-			if (plane == address.plane && valid >= PLANE &&
-			        address.valid >= PLANE) {
-				match = PLANE;
-#endif
-				if (block == address.block && valid >= BLOCK &&
-				        address.valid >= BLOCK) {
-					match = BLOCK;
-					if (page == address.page && valid >= PAGE &&
-					        address.valid >= PAGE) {
-						match = PAGE;
-					}
-				}
-#ifndef SINGLE_PLANE
-			}
-		}
-	}
-#endif
-	return match;
+enum address_valid Address::compare(const Address& address) const
+{
+        enum address_valid match = NONE;
+        if (package == address.package && valid >= PACKAGE && address.valid >= PACKAGE) {
+                match = PACKAGE;
+                if (die == address.die && valid >= DIE && address.valid >= DIE) {
+                        match = DIE;
+                        if (plane == address.plane && valid >= PLANE && address.valid >= PLANE) {
+                                match = PLANE;
+                                if (block == address.block && valid >= BLOCK && address.valid >= BLOCK) {
+                                        match = BLOCK;
+                                        if (page == address.page && valid >= PAGE && address.valid >= PAGE) {
+                                                match = PAGE;
+                                        }
+                                }
+                        }
+                }
+        }
+        return match;
 }
 
 /* default stream is stdout */
-void
-Address::print(FILE* stream)
+void Address::print(FILE* stream)
 {
-	fprintf(stream, "(%d, %d, %d, %d, %d, %d)", package, die, plane, block,
-	        page, (int)valid);
-	return;
+        fprintf(stream, "(%d, %d, %d, %d, %d, %d)", package, die, plane, block, page, (int)valid);
+        return;
 }
 
 void Address::set_linear_address(ulong /*address*/)
 {
 #ifdef NOT_USE_BLOCKMGR
-	assert(false);
+        assert(false);
 #else
-	real_address = address;
-	page = address % BLOCK_SIZE;
-	address /= BLOCK_SIZE;
-	block = address % PLANE_SIZE;
-	address /= PLANE_SIZE;
-	plane = address % DIE_SIZE;
-	address /= DIE_SIZE;
-	die = address % PACKAGE_SIZE;
-	address /= PACKAGE_SIZE;
-	package = address % SSD_SIZE;
-	address /= SSD_SIZE;
+        real_address = address;
+        page = address % BLOCK_SIZE;
+        address /= BLOCK_SIZE;
+        block = address % PLANE_SIZE;
+        address /= PLANE_SIZE;
+        plane = address % DIE_SIZE;
+        address /= DIE_SIZE;
+        die = address % PACKAGE_SIZE;
+        address /= PACKAGE_SIZE;
+        package = address % SSD_SIZE;
+        address /= SSD_SIZE;
 #endif
 }
 
-void
-Address::set_linear_address(ulong address, enum address_valid valid)
+void Address::set_linear_address(ulong address, enum address_valid valid)
 {
-	set_linear_address(address);
-	this->valid = valid;
+        set_linear_address(address);
+        this->valid = valid;
 }
 
-unsigned long
-Address::get_linear_address() const
+unsigned long Address::get_linear_address() const { return real_address; }
+
+void Address::operator+(int i) { set_linear_address(real_address + i); }
+
+void Address::operator+(uint i) { set_linear_address(real_address + i); }
+
+Address& Address::operator+=(const uint i)
 {
-	return real_address;
+        set_linear_address(real_address + i);
+        return *this;
 }
 
-void
-Address::operator+(int i)
+Address& Address::operator=(const Address& rhs)
 {
-	set_linear_address(real_address + i);
+        if (this == &rhs)
+                return *this;
+        package = rhs.package;
+        die = rhs.die;
+        plane = rhs.plane;
+        block = rhs.block;
+        page = rhs.page;
+        valid = rhs.valid;
+        real_address = rhs.real_address;
+        return *this;
 }
 
-void
-Address::operator+(uint i)
+bool Address::same_block(const Address& rhs)
 {
-	set_linear_address(real_address + i);
-}
-
-Address&
-Address::operator+=(const uint i)
-{
-	set_linear_address(real_address + i);
-	return *this;
-}
-
-Address&
-Address::operator=(const Address& rhs)
-{
-	if (this == &rhs)
-		return *this;
-#ifndef SINGLE_PLANE
-	package = rhs.package;
-	die = rhs.die;
-	plane = rhs.plane;
-#else
-	package = 0;
-	die = 0;
-	plane = 0;
-#endif
-	block = rhs.block;
-	page = rhs.page;
-	valid = rhs.valid;
-	real_address = rhs.real_address;
-	return *this;
-}
-
-bool
-Address::same_block(const Address& rhs)
-{
-	return
-#ifndef SINGLE_PLANE
-	    package == rhs.package and die == rhs.die and plane == rhs.plane and
-#endif
-	    block == rhs.block;
+	return package == rhs.package && die == rhs.die && plane == rhs.plane && block == rhs.block;
 }
